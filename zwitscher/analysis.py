@@ -7,6 +7,8 @@ from __future__ import print_function
 import os
 import pickle
 import sys
+import re
+import string
 
 from utils.PCC import load as load_pcc
 from utils.dimlex import load as load_dimlex
@@ -114,7 +116,14 @@ def compare_PCC_dimlex(PCC_discourse, dimlex):
     return disc_conn_words
 
 
-
+def analyse_disambiguity(text, lexicon):
+    # Creating regexps that can find discontinuous connectives - ungreedy up to a distance of 100 characters
+    connective_words = ['.{0,100}? '.join(word.split('_')) for word in lexicon.orthography_variants.keys()]
+    # ToDo: Create better regexps to find discontinuous connectives and overlapping matches
+    matches = re.findall(('[ %s]|[ %s]' % (string.punctuation, string.punctuation)).join(lexicon.orthography_variants),
+                         text)
+    print("%i of %i matches are disambiguous" % (len([word for word in matches if lexicon.disambi(word[1:-1])]),
+                                                 len(matches)))
 
 if __name__ == '__main__':
     pickle_folder = 'data'

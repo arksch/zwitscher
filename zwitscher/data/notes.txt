@@ -70,3 +70,40 @@ ipdb> len(set([word for word in words if not ((word in lexicon.orthography_varia
 45  # Its not about lowercasing. Thats nice.
 ipdb> set([word for word in words if not (word in lexicon.orthography_variants)])
 set([u'jedenfalls', '', u'zwar_aber', u'Zwar_aber', u'wenn auch', u'dar\xfcberhinaus', u'Je_desto', u'dann_wenn', u'Wenn_dann', u'vor', u'Schlie\xdflich', u'Dar\xfcber hinaus', u'z. B.', u'zwar_Aber', u'N\xe4mlich', u'Blo\xdf', u'Daf\xfcr', u'w\xe4hrend', u'ebenso', u'dar\xfcber hinaus', u'laufen', u'Wenn', u'n\xe4mlich', u'Bei', u'Zum einen_zum anderen', u'Auch wenn', u'ohne', u'Zwar_Aber', u'W\xe4hrend', u'Um', u'Einerseits_Andererseits', u'au\xdferdem', u'um_zu', u'So', u'wenn', u'Statt dessen', u'auch wenn', u'Nach', u'um', u'Au\xdferdem', u'Um_zu', u'so', u'durch', u'Wenn_so', u'schlie\xdflich'])
+
+Lexicon disambiguity is rather high.
+In [17]: len(lexicon.connectives)
+Out[17]: 277
+In [18]: len([conn for conn in lexicon.connectives if lexicon.disambi(conn)])
+Out[18]: 150
+In [33]: connective_words = ['.{0,100}? '.join(word.split('_')) for word in lexicon.orthography_variants.keys()]
+In [32]: len(connective_words)
+Out[32]: 765  # So many orthography variants
+In [43]: len(set([word.lower() for word in connective_words]))
+Out[43]: 397  # So many orthography variants after lowercasing
+
+Finding connectives in a text:
+In [36]: len(txt.split())
+Out[36]: 13790
+In [66]: len(matches)
+Out[66]: 820  # These are only continuous!!!
+In [65]: len([word for word in matches if lexicon.disambi(word[1:-1])])
+Out[65]: 794  # Only 3% of the matches are disambiguously connectives or not
+In [67]: sorted(matches, key=lambda x:-len(x))[:10]  # Due to the regex search with | we found nearly no long matches
+Out[67]:
+[' gleichzeitig ',
+ ' Das hei\xc3\x9ft ',
+ ' \xc3\xbcberhaupt ',
+ ' \xc3\xbcberhaupt ',
+ ' besonders.',
+ ' hinterher ',
+ ' aufgrund ',
+ ' erst mal ',
+ ' trotzdem ',
+ ' immerhin ']
+
+
+
+
+
+
