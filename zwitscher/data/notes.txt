@@ -1,0 +1,72 @@
+The connectives in the PCC have attributes ext/int that correspond to arg0, arg1 in the PDTB#
+
+Are there any implicit connectives annotated at all?
+Can discontinous discourse connectives extend over sentence boundaries? (After looking at all of them, I do not think so)
+The relation given by PCC does not match the relations of the dimlex. Some are present as conjrel, some as relation, some arent present
+Entweder .. oder: Strangely labeled with the whole sentence as ext and the oder-phrase as int.
+
+Maybe create my own connective lexicon from the PCC?
+
+How to parse the TIGER syntax XML into a useful Python object. Such that the same is done, when parsing unseen sentences?
+Which parser to use for German?
+Need:
+- get_pos_tag(word_position)
+- get_path_to_root(word_position, compress=True)
+- compress_path(path)
+
+
+ToDo
+- create list with all words that appear as discourse connectives in a tokenized text, split into sentences
+how to deal with cont and discont?
+output should be a list of tuples (sentence_index, list_of_word_indices)
+
+
+Deal with these errors:
+{'maz-7690.xml': ValueError('No arguments set for connective connective:[] \nrelation: \narg0: []\narg1: [72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91]',), 'maz-14072.xml': AssertionError('Discontinuous connectives have to have the same relation',), 'maz-9207.xml': ValueError('No arguments set for connective connective:[] \nrelation: \narg0: [126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145]\narg1: []',), 'maz-16153.xml': AssertionError('Discontinuous connectives have to have the same relation',), 'maz-17242.xml': ValueError('No arguments set for connective connective:[] \nrelation: \narg0: []\narg1: [45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78]',)}
+
+'maz-16153.xml' erfüllt nicht Annahme, dass nur eine relation für disc herrscht
+<connective id="3" relation="concession">Zwar</connective>
+<connective id="3" relation="contrast">doch</connective>
+
+ipdb> len(results_pd)
+1090
+ipdb> len(results_pd[results_pd['cont_type'] == 'cont'])
+1053
+ipdb> len(results_pd[results_pd['cont_type'] == 'discont'])
+37
+ipdb> len(results_pd[results_pd['phrase_type_0'] == 'single'])
+1056
+ipdb> len(results_pd[results_pd['phrase_type_0'] == 'phrasal'])
+34
+ipdb> len(results_pd[results_pd['phrase_type_1'] == 'phrasal'])
+1
+ipdb> len(results_pd[results_pd['phrase_type_1'] == 'single'])
+36
+
+
+Filter the PCC discourses for completeness. Is something parsed incorrectly?
+ipdb> len(pcc)
+174
+ipdb> len(all_conn)
+1103
+ipdb> len([conn for conn in all_conn if conn.is_complete()])
+1098  # This means 5 discourses are incomplete
+
+ipdb> len(words)
+1103
+ipdb> len([word for word in words if word])
+1100  # This means 3 discourses have no discourse connective set
+ipdb> len(set([word for word in words if word]))
+165  # There are only 165 distinct words
+ipdb> len(set([word.lower() for word in words if word]))
+117  # Actually even less! Probably some will still be thrown out.
+ipdb> len(lexicon.connectives)
+277  # Compared to the lexicon this is not much.
+ipdb> len(set([lexicon.orthography_variants[word] for word in words if (word in lexicon.orthography_variants)]))
+83  # Only 83 distinct lexicon entries are in the PCC corpus
+ipdb> len(set([word for word in words if not (word in lexicon.orthography_variants)]))
+45  # 45 words cannot be found in the lexicon! Which are those?
+ipdb> len(set([word for word in words if not ((word in lexicon.orthography_variants) or (word.lower() in lexicon.orthography_variants))]))
+45  # Its not about lowercasing. Thats nice.
+ipdb> set([word for word in words if not (word in lexicon.orthography_variants)])
+set([u'jedenfalls', '', u'zwar_aber', u'Zwar_aber', u'wenn auch', u'dar\xfcberhinaus', u'Je_desto', u'dann_wenn', u'Wenn_dann', u'vor', u'Schlie\xdflich', u'Dar\xfcber hinaus', u'z. B.', u'zwar_Aber', u'N\xe4mlich', u'Blo\xdf', u'Daf\xfcr', u'w\xe4hrend', u'ebenso', u'dar\xfcber hinaus', u'laufen', u'Wenn', u'n\xe4mlich', u'Bei', u'Zum einen_zum anderen', u'Auch wenn', u'ohne', u'Zwar_Aber', u'W\xe4hrend', u'Um', u'Einerseits_Andererseits', u'au\xdferdem', u'um_zu', u'So', u'wenn', u'Statt dessen', u'auch wenn', u'Nach', u'um', u'Au\xdferdem', u'Um_zu', u'so', u'durch', u'Wenn_so', u'schlie\xdflich'])
