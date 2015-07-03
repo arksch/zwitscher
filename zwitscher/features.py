@@ -5,16 +5,14 @@ This module includes feature methods to create features from discourse connectiv
 their argument positions
 """
 import re
-import string
 
-import numpy as np
 import pandas as pd
 
 from utils.dimlex import load as load_dimlex
 __author__ = 'arkadi'
 
 
-def discourse_connective_text_featurizer(sents, connective_positions,
+def discourse_connective_text_featurizer(sents, nested_connective_positions,
                                          feature_list=['connective_lexical', 'length_connective',
                                                        'length_prev_sent', 'length_same_sent', 'length_next_sent',
                                                        'tokens_before', 'tokens_after', 'tokens_between'],
@@ -23,8 +21,8 @@ def discourse_connective_text_featurizer(sents, connective_positions,
 
     :param sents: A list of sentences. Each sentence is a list of tokens.
     :type sents: list
-    :param connective_positions: list of indices, each index is a pair (sentence_index, token_index)
-    :type connective_positions: list
+    :param nested_connective_positions: list of nested indices, each index is a pair (sentence_index, token_index)
+    :type nested_connective_positions: list
     :param feature_list: which features are calculated. You can also pass your own function to calculate the features
     'connective_lexical': lexical entry of the connective (or normalized if not present in lexicon)
     'length_connective': number of words in the connective
@@ -67,54 +65,55 @@ def discourse_connective_text_featurizer(sents, connective_positions,
         else:
             feature_fct = feature
             feature_name = feature.__name__
-        results[feature_name] = feature_fct(sents, connective_positions)
+        results[feature_name] = feature_fct(sents, nested_connective_positions)
     return results
 
-def chunk_connective(connective_positions):
+def chunk_connective(nested_connective_positions):
     """ Helper to chunk a connective into its continuous parts
 
-    :param connective_positions: list of pairs of (sent_index, token_index)
-    :type connective_positions: list
+    :param nested_connective_positions: list of pairs of (sent_index, token_index)
+    :type nested_connective_positions: list
     :return: list of chunks, each chunk is a list of pairs of (sent_index, token_index)
     :rtype: list
     """
     chunks = []
     current_chunk = []
-    connective_positions = sorted(connective_positions)
-    for i in range(0, len(connective_positions)):
+    nested_connective_positions = sorted(nested_connective_positions)
+    for i in range(0, len(nested_connective_positions)):
         # Finding all the words in the sentence and
         if not current_chunk:
-            current_chunk.append(connective_positions[i])
+            current_chunk.append(nested_connective_positions[i])
         else:
-            if connective_positions[i - 1][0] != connective_positions[i][0]:
+            if nested_connective_positions[i - 1][0] != nested_connective_positions[i][0]:
                 # Crossed sentence boundary
                 chunks.append(current_chunk)
-                current_chunk = [connective_positions[i]]
+                current_chunk = [nested_connective_positions[i]]
             else:
-                if connective_positions[i - 1][1] + 1 != connective_positions[i][1]:
+                if nested_connective_positions[i - 1][1] + 1 != nested_connective_positions[i][1]:
                     # Skipped words
                     chunks.append(current_chunk)
-                    current_chunk = [connective_positions[i]]
+                    current_chunk = [nested_connective_positions[i]]
                 else:
                     # We are continuing our connective
-                    current_chunk.append(connective_positions[i])
+                    current_chunk.append(nested_connective_positions[i])
     chunks.append(current_chunk)
     return chunks
 
-def connective_raw(sents, connective_positions):
+def connective_raw(sents, nested_connective_positions):
     """ Helper to calculate the raw connective from the text and the positions
 
     :param sents: list of sentences. Each sentence a list of tokens
-    :param connective_positions: list of pairs of (sent_index, token_index)
-    :type connective_positions: list
+    :param nested_connective_positions: list of pairs of (sent_index, token_index)
+    :type nested_connective_positions: list
     :return: concatenate the strings. Discontinuous jumps are concatenated with a '_'
     """
-    chunks = chunk_connective(connective_positions)
+    chunks = chunk_connective(nested_connective_positions)
     return '_'.join([' '.join([sents[sent][tok] for (sent, tok) in chunk]) for chunk in chunks])
 
 
 def connective_lexical(connective_raw, lexicon):
-    """ Look up canonical spelling, create own normalized version if the word doesn't exist in the lexicon
+    """ Feature function
+    Look up canonical spelling, create own normalized version if the word doesn't exist in the lexicon
 
     :param connective_raw: string of the connective. Discontinuous parts are separated with '_'
     :type connective_raw: basestring
@@ -135,21 +134,22 @@ def connective_lexical(connective_raw, lexicon):
         return normalized_conn_raw
 
 
-def sent_length(sents, connective_positions, direction='prev'):
-    """ Calcualtes lengths of sentences around a connective
+def sent_length(sents, nested_connective_positions, direction='prev'):
+    """ Feature function
+    Calculates lengths of sentences around a connective
 
     Use direction 'prev', 'same' or 'next'
     For connectives that spread over more than one sentence, 'prev' denotes the first sentence, 'same' the second
     :param sents:
     :type sents:
-    :param connective_positions:
-    :type connective_positions:
+    :param nested_connective_positions:
+    :type nested_connective_positions:
     :param direction: 'prev', 'same' or 'next'
     :type direction:
     :return: length of the sentence in the given direction
     :rtype: int
     """
-    conn_sents, conn_pos = zip(*connective_positions)  # unzipping the sentences from the positions
+    conn_sents, conn_pos = zip(*nested_connective_positions)  # unzipping the sentences from the nested positions
     if len(set(conn_sents)) == 1:
         # The connective spreads only over one sentence
         prev_ind = conn_sents[0] - 1
@@ -176,28 +176,28 @@ def sent_length(sents, connective_positions, direction='prev'):
             # There is no next sentence
             return 0
 
-def number_of_tokens(sents, connective_positions, direction='before'):
+def number_of_tokens(sents, nested_connective_positions, direction='before'):
     """ Feature function
 
     Counting tokens inside sentences before/after/between connectives. 'between' is 0 for continuous connectives.
     :param sents:
     :type sents:
-    :param connective_positions:
-    :type connective_positions:
+    :param nested_connective_positions:
+    :type nested_connective_positions:
     :param direction:
     :type direction:
     :return:
     :rtype: int
     """
-    connective_positions = sorted(connective_positions)
+    nested_connective_positions = sorted(nested_connective_positions)
     if direction == 'before':
-        sent, tok = connective_positions[0]
+        sent, tok = nested_connective_positions[0]
         return tok
     if direction == 'after':
-        sent, tok = connective_positions[-1]
+        sent, tok = nested_connective_positions[-1]
         return len(sents[sent]) - tok - 1
     if direction == 'between':
-        chunks = chunk_connective(connective_positions)
+        chunks = chunk_connective(nested_connective_positions)
         if len(chunks) == 0:
             return None  # Missing value
         elif len(chunks) == 1:

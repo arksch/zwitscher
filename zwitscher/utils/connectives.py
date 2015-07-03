@@ -4,7 +4,7 @@
 """
 This module deals with German connectives
 """
-
+import re
 
 __author__ = 'arkadi'
 
@@ -124,7 +124,11 @@ class Discourse(object):
             self.sentences = sentences
         else:
             # Find the sentence beginnings by points (doesn't account for abbreviations)
-            points = [i + 1 for (i, tok) in enumerate(self.tokens) if tok == '.']
+            # ToDo: Make this smarter
+            points = [i + 1 for (i, tok) in enumerate(self.tokens) if re.match('[.!?]+', tok) is not None]
+            if not len(self.tokens) in points:
+                # The last sentence might not have been closed
+                points.append(len(self.tokens))
             # Shift them back by one and add 0 to get the sentence beginnings and zip them
             prev_points = [0]
             prev_points.extend([pt for pt in points[:-1]])
@@ -158,7 +162,6 @@ class Discourse(object):
                 return False
             else:
                 return True
-
 
 
 class LexConnective(object):

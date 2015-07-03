@@ -30,7 +30,8 @@ def analyse_argument_positions(sentences, connective):
         min1 = min(connective.arg1)
         max1 = max(connective.arg1)
     else:
-        raise ValueError('No arguments set for connective %s' % str(connective))
+        # Better to put None for corrupted data
+        return None, None, None
     # Find out whether arg0 is before, after or around arg0
     # Note that right sentence boundaries are exclusive, whereas the min/max are inclusive
     if max1 < min0:
