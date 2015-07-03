@@ -23,8 +23,15 @@ def test_discourse_connective_text_featurizer():
     sents = [['Das', 'stimmt', 'zwar', '.'], ['Aber', 'egal']]
     conn_pos = [(0, 2), (1, 0)]
     # ToDo: Add global variables for dimlex and pcc paths
-    results = discourse_connective_text_featurizer(sents, conn_pos, feature_list=['connective_lexical'])
+    results = discourse_connective_text_featurizer(sents, conn_pos)
     assert results['connective_lexical'] == 'zwar_aber'
+    assert results['length_prev_sent'] == 4
+    assert results['length_same_sent'] == 2
+    assert results['length_next_sent'] == 0
+    assert results['tokens_before'] == 2
+    assert results['tokens_between'] == 1
+    assert results['tokens_after'] == 1
+    assert results['length_connective'] == 2
 
 if __name__ == '__main__':
     test_discourse_connective_text_featurizer()
