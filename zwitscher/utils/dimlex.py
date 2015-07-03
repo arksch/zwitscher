@@ -15,11 +15,12 @@ def parse(dimlex_xml):
         lex_conn = LexConnective()
         # Parsing the disambiguous statement
         disambig = re.findall('<conn_d.*?</conn_d>', match)
-        assert len(disambig) == 1, 'There should be mentioned exactly once whether the connective is disambiguous:\n%s' % match
+        assert len(disambig) == 1, \
+            'There should be mentioned exactly once whether the connective is disambiguous:\n%s' % match
         disambig = disambig[0]
         disambig = int(re.sub('[^0-9]', '', disambig))
         assert disambig in [0, 1], 'True or false'
-        lex_conn.disambi = bool(disambig)
+        lex_conn.disambi = not bool(disambig)
 
         # Parsing the different orthographies
         orths = re.findall('<orth.*?</orth>', match, re.DOTALL)

@@ -18,7 +18,7 @@ __author__ = 'arkadi'
 def analyse_argument_positions(sentences, connective):
     """ Analyze the argument positions of a connective in a sequence of sentences
 
-    :param sentences: List of integer pairs for start and end
+    :param sentences: List of integer pairs for start and end. The end is *not* inclusive.
     :type sentences: list
     :type connective: zwitscher.utils.connectives.DiscConnective
     :return: token distance, sentence distance and involved sentences of arguments
@@ -116,14 +116,32 @@ def compare_PCC_dimlex(PCC_discourse, dimlex):
     return disc_conn_words
 
 
-def analyse_disambiguity(text, lexicon):
+def find_matches(text, lexicon):
+    """ Finding matches in a raw text that match some key of a lexicon
+
+    :param text:
+    :type text: basestring
+    :param lexicon:
+    :type lexicon: Lexicon
+    :return:
+    :rtype: list
+    """
     # Creating regexps that can find discontinuous connectives - ungreedy up to a distance of 100 characters
     connective_words = ['.{0,100}? '.join(word.split('_')) for word in lexicon.orthography_variants.keys()]
-    # ToDo: Create better regexps to find discontinuous connectives and overlapping matches
-    matches = re.findall(('[ %s]|[ %s]' % (string.punctuation, string.punctuation)).join(lexicon.orthography_variants),
-                         text)
-    print("%i of %i matches are disambiguous" % (len([word for word in matches if lexicon.disambi(word[1:-1])]),
-                                                 len(matches)))
+    # ToDo: Create better regexps to find discontinuous connectives and overlapping matches (zB so:
+    # for m in re.finditer(r"\w+ly", text):
+    #     print '%02d-%02d: %s' % (m.start(), m.end(), m.group(0))
+    matches = []
+    for conn in connective_words:
+        matches.extend(re.findall(re.escape(' ' + conn + ' '), text))
+    #matches = re.findall(('[ %s]|[ %s]' % (string.punctuation, string.punctuation)).join(lexicon.orthography_variants),
+    #                     text)
+    #print("%i of %i matches are disambiguous" % (len([word for word in matches if lexicon.disambi(word[1:-1])]),
+    #                                             len(matches)))
+    return matches
+
+
+
 
 if __name__ == '__main__':
     pickle_folder = 'data'

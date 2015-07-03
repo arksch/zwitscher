@@ -139,6 +139,27 @@ class Discourse(object):
         arg1_txt = ' '.join([self.tokens[i] for i in connective.arg1])
         return conn_txt, arg0_txt, arg1_txt
 
+    def connective_in_one_sentence(self, connective):
+        """
+        Helper function to check, whether the connective is in the same sentence
+        This is trivially true for connectives of length one
+        :return: None if the connective doesnt have positions. True if the connective is in the same sentence.
+        False otherwise
+        """
+        if len(connective.positions) < 1:
+            return None
+        elif len(connective.positions) == 1:
+            return True
+        elif len(connective.positions) > 1:
+            # Finding the sentence of the first word of the connective
+            sent = [sent for sent in self.sentences if sent[0] <= connective.positions[0] < sent[1]][0]
+            if len([pos for pos in connective.positions if not (sent[0] <= pos < sent[1])]) > 0:
+                # There are words outside this sentence
+                return False
+            else:
+                return True
+
+
 
 class LexConnective(object):
     """
