@@ -1,1 +1,9 @@
-*.pyc
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+#remove backup files
+*.*~
+
+#Pycharm
+.idea/
