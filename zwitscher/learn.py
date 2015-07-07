@@ -13,6 +13,7 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from sklearn.cross_validation import cross_val_score
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics.scorer import f1_score
 
 from utils.PCC import load as load_pcc
 from gold_standard import pcc_to_gold
@@ -112,8 +113,10 @@ def main(feature_list=['connective_lexical', 'length_connective',
     le = LabelEncoder()
     if label_features:
         print 'Encoding labels...'
-        le.fit(features[label_features])
-        features[label_features] = le.transform(features[label_features])
+        # LabelEncoder only deals with 1 dim np.arrays
+        le.fit(features[label_features].values.ravel())
+        for feat in label_features:
+            features[feat] = le.transform(features[feat])
         print 'Encoded label'
 
     print 'Cross validating classifier...'
@@ -140,7 +143,11 @@ def main(feature_list=['connective_lexical', 'length_connective',
 if __name__ == '__main__':
 
     feature_list = ['connective_lexical', 'length_prev_sent', 'length_connective',
-                    'length_same_sent', 'tokens_before', 'length_next_sent']
+                    'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token', 'next_token']
     # 'tokens_before', 'tokens_after', ,             'length_next_sent',]
 
-    main(feature_list=feature_list, label_features=['connective_lexical'], unpickle_gold=True, pickle_classifier=True)
+    main(feature_list=feature_list,
+         label_features=['connective_lexical', 'prev_token', 'next_token'],
+         unpickle_gold=True,
+         pickle_classifier=True)
+

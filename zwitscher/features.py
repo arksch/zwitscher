@@ -15,7 +15,8 @@ __author__ = 'arkadi'
 def discourse_connective_text_featurizer(sents, nested_connective_positions,
                                          feature_list=['connective_lexical', 'length_connective',
                                                        'length_prev_sent', 'length_same_sent', 'length_next_sent',
-                                                       'tokens_before', 'tokens_after', 'tokens_between'],
+                                                       'tokens_before', 'tokens_after', 'tokens_between',
+                                                       'prev_token', 'next_token'],
                                          dimlex_path='data/dimlex.xml'):
     """ A very simple featurizer for connectives in a text to classify argument positions
 
@@ -60,6 +61,10 @@ def discourse_connective_text_featurizer(sents, nested_connective_positions,
                 feature_fct = lambda s, c: number_of_tokens(s, c, direction='after')
             elif feature == 'tokens_between':
                 feature_fct = lambda s, c: number_of_tokens(s, c, direction='between')
+            elif feature == 'prev_token':
+                feature_fct = lambda s, c: token(s, c, direction='prev')
+            elif feature == 'next_token':
+                feature_fct = lambda s, c: token(s, c, direction='next')
             else:
                 raise ValueError('%s is an unknown feature' % feature)
         else:
@@ -216,3 +221,31 @@ def number_of_tokens(sents, nested_connective_positions, direction='before'):
                         sum([len(sents[i]) for i in range(left[0] + 1, right[0])]))  # Tokens from sentences inbetween
         else:
             return None
+
+def token(sents, nested_connective_positions, direction='prev'):
+    """ Feature function
+
+    Returns the first token before or after the connective
+    If the connective is bounded by a sentence, always a '.' is returned
+    :param sents:
+    :type sents:
+    :param nested_connective_positions:
+    :type nested_connective_positions:
+    :param direction:
+    :type direction:
+    :return:
+    :rtype: str
+    """
+    if direction == 'prev':
+        sent, pos = min(nested_connective_positions)
+        if pos == 0:
+            return '.'
+        else:
+            return sents[sent][pos - 1]
+    if direction == 'next':
+        sent, pos = max(nested_connective_positions)
+        # We take points as sentence boundaries. Do not care for ? or !
+        if pos + 2 >= len(sents[sent]):
+            return '.'
+        else:
+            return sents[sent][pos + 1]
