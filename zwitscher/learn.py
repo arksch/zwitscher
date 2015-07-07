@@ -143,11 +143,11 @@ def main(feature_list=['connective_lexical', 'length_connective',
 if __name__ == '__main__':
 
     feature_list = ['connective_lexical', 'length_prev_sent', 'length_connective',
-                    'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token', 'next_token']
+                    'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token', 'next_token', '2prev_token']
     # 'tokens_before', 'tokens_after', ,             'length_next_sent',]
 
     main(feature_list=feature_list,
-         label_features=['connective_lexical', 'prev_token', 'next_token'],
+         label_features=['connective_lexical', 'prev_token', 'next_token', '2prev_token'],
          unpickle_gold=True,
          pickle_classifier=True)
 
