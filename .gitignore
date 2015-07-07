@@ -1,6 +1,12 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[cod]
+*.pyo
+*.pyc
+*.pyd
+
+# Pickled classifiers
+*_classifier.pickle
+*_encoder.pickle
 
 #remove backup files
 *.*~

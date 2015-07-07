@@ -213,6 +213,6 @@ def number_of_tokens(sents, nested_connective_positions, direction='before'):
             else:
                 return (number_of_tokens(sents, [left], direction='after') +  # Tokens from the left sentence
                         number_of_tokens(sents, [right], direction='before') +  # Tokens from the right sentence
-                        sum([sents[i] for i in range(left[0] + 1, right[0])]))  # Tokens from sentences inbetween
+                        sum([len(sents[i]) for i in range(left[0] + 1, right[0])]))  # Tokens from sentences inbetween
         else:
             return None
