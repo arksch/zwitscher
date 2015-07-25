@@ -10,7 +10,7 @@ import sys
 import re
 import string
 
-from utils.PCC import load as load_pcc
+from utils.PCC import load_connectors as load_pcc
 from utils.dimlex import load as load_dimlex
 
 __author__ = 'arkadi'
@@ -94,12 +94,12 @@ def arg_pos_in_PCC(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twit
     return results
 
 
-def compare_PCC_dimlex(PCC_discourse, dimlex):
+def compare_PCC_dimlex(pcc, dimlex):
     """ Answers the following questions:
     Which connectives are present in both?
 
-    :param PCC_discourse:
-    :type PCC_discourse: list
+    :param pcc: Discourse objects from the PCC
+    :type pcc: list
     :param dimlex:
     :type dimlex: zwitscher.utils.connectives.Lexicon
     :return:
@@ -140,6 +140,7 @@ def find_matches(text, lexicon):
     #print("%i of %i matches are disambiguous" % (len([word for word in matches if lexicon.disambi(word[1:-1])]),
     #                                             len(matches)))
     return matches
+
 
 
 

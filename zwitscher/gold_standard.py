@@ -32,8 +32,9 @@ def pcc_to_gold(pcc):
             nested_arg1 = flat_index_to_nested(disc.sentences, conn.arg1, sent_to_index_dict=sent_to_index)
             # For the middle step we try to predict the sentences that include the arguments
             token_dist, sent_dist, involved_sents = analyse_argument_positions(disc.sentences, conn)
-            data.append({'sentences': sents, 'connective_positions': nested_positions, 'sentence_dist': sent_dist,
-                         'arg0': nested_arg0, 'arg1': nested_arg1, 'relation': conn.relation})
+            data.append({'sentences': sents, 'syntax': disc.syntax, 'connective_positions': nested_positions,
+                         'sentence_dist': sent_dist, 'arg0': nested_arg0, 'arg1': nested_arg1,
+                         'relation': conn.relation})
     return pd.DataFrame(data=data)
 
 
@@ -52,6 +53,8 @@ def flat_index_to_nested(flat_sents, flat_indices, sent_to_index_dict=None):
     """
     if not flat_indices:
         return None
+    if sent_to_index_dict is None:
+        sent_to_index_dict = dict([(i, sent) for sent, i in enumerate(flat_sents)])
     nested_indices = []
     candidate_sents = [sent for sent in flat_sents if
                        min(flat_indices) < sent[1] and sent[0] <= max(flat_indices)]

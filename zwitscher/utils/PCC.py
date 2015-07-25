@@ -8,8 +8,10 @@ import sys
 import pickle
 
 import xmltodict
+from bs4 import BeautifulSoup
 
 from connectives import DiscConnective, Discourse
+from tree import ConstituencyTree
 
 __author__ = 'arkadi'
 
@@ -111,18 +113,20 @@ class Parser(object):
         return units
 
 
-    def parse(self, xml):
+    def parse_discourse(self, discourse_xml, syntax_xml=None):
         """
         Parses an xml string into a Discourse object
-        :param xml: xml string as in the PCC
-        :type xml: basestring
+        :param discourse_xml: xml string as in the PCC
+        :type discourse_xml: basestring
+        :param syntax_xml: TigerXML string with syntactical information of the discourse
+        :type syntax_xml: basestring
         :return: dictionary of TextConnective objects
         :rtype: Discourse
         """
         connectives = dict()
-        tokens = re.sub('<[^>]*>', '', xml).split()
-        xml = self.numerate_tokens(xml, tokens=tokens)
-        discourse_dict = xmltodict.parse(xml)
+        tokens = re.sub('<[^>]*>', '', discourse_xml).split()
+        discourse_xml = self.numerate_tokens(discourse_xml, tokens=tokens)
+        discourse_dict = xmltodict.parse(discourse_xml)
         units = self.get_children(discourse_dict['discourse'], include_root=False)
         for unit in units:
             # Each unit is an ordered dict.
@@ -176,13 +180,33 @@ class Parser(object):
         discourse.tokens = tokens
         discourse.rawtext = ' '.join(tokens)
         discourse.connectives = connectives.values()
+        if syntax_xml is not None:
+            tiger_syntax_dict = parse_syntax(syntax_xml)
+            discourse.load_tiger_syntax(tiger_syntax_dict)
+        else:
+            # No good way to find sentence boundaries, so we just take [.?!]
+            discourse.set_sentences()
         return discourse
 
 
-def load(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
-                          'potsdam-commentary-corpus-2.0.0/connectors',
-         pickle_folder='data'):
-    """ Load the whole PCC into discourse objects
+def parse_syntax(xml_text):
+    soup = BeautifulSoup(xml_text)
+    sentences_xml = soup.find_all('s')
+    annotations = []  # A list with a Constituency Tree for each sentence
+    # Get the constituency trees
+    for sent_xml in sentences_xml:
+        annotations.append(ConstituencyTree(str(sent_xml)))
+    # Sort the output just in case
+    # annotations = sorted(annotations, key=lambda tree: int(tree.id[1:]))  # ids are of the form s1234
+    return annotations
+
+
+def load_connectors(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
+                                     'potsdam-commentary-corpus-2.0.0/connectors',
+                    syntax_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
+                                  'potsdam-commentary-corpus-2.0.0/syntax',
+                    pickle_folder='data/'):
+    """ Load the whole PCC connectors into a discourse objects
 
     :param connector_folder:
     :type connector_folder:
@@ -196,10 +220,14 @@ def load(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
     pcc = []
     for conn_file in os.listdir(connector_folder):
         with open(os.path.join(connector_folder, conn_file), 'r') as f:
-            maz_xml = unicode(f.read(), 'utf-8')
+            discourse_xml = unicode(f.read(), 'utf-8')
+        if syntax_folder:
+            with open(os.path.join(syntax_folder, conn_file), 'r') as f:
+                syntax_xml = unicode(f.read(), 'utf-8')
+        else:
+            syntax_xml = None
         try:
-            discourse = parser.parse(maz_xml)
-            discourse.set_sentences()
+            discourse = parser.parse_discourse(discourse_xml, syntax_xml=syntax_xml)
             discourse.name = conn_file
             pcc.append(discourse)
         except Exception, e:
@@ -209,3 +237,4 @@ def load(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
             pickle.dump(pcc, f, protocol=pickle.HIGHEST_PROTOCOL)
     sys.stderr.write(str(errors))
     return pcc
+

@@ -5,6 +5,7 @@ This module includes feature methods to create features from discourse connectiv
 their argument positions
 """
 import re
+import os.path
 
 import pandas as pd
 
@@ -17,7 +18,7 @@ def discourse_connective_text_featurizer(sents, nested_connective_positions,
                                                        'length_prev_sent', 'length_same_sent', 'length_next_sent',
                                                        'tokens_before', 'tokens_after', 'tokens_between',
                                                        'prev_token', '2prev_token', 'next_token'],
-                                         dimlex_path='data/dimlex.xml'):
+                                         dimlex_path=os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')):
     """ A very simple featurizer for connectives in a text to classify argument positions
 
     :param sents: A list of sentences. Each sentence is a list of tokens.

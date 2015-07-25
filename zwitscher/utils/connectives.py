@@ -91,6 +91,8 @@ class Discourse(object):
         self.tokens = list()
         self.sentences = list()  # A list of tuples with start and end points
         self.connectives = list()  # This is a quadruple of a connective, its position and its argument spans
+        self.annotations = {}
+        self.syntax = []  # A list with ConstituencyTrees for each sentence
 
     def __iter__(self):
         """
@@ -133,6 +135,53 @@ class Discourse(object):
             prev_points = [0]
             prev_points.extend([pt for pt in points[:-1]])
             self.sentences = zip(prev_points, points)
+
+    # METHOD IS NOT USED, DUE TO COMPATIBILITY PROBLEMS
+    # def load_annotations(self, annotations):
+    #     """
+    #     Loading annotated data from the PCC files or the TreeTagger
+    #     :param annotations: a dict with sentence index as key and a list with a dict per token as values
+    #     :type annotations: dict
+    #     """
+    #     self.annotations = annotations
+    #
+    #     # Setting the sentences as they are from the annotations
+    #     sentence_boundaries = []
+    #     left_boundary = 0
+    #     for sentence in annotations.itervalues():
+    #         right_boundary = left_boundary + len(sentence)
+    #         sentence_boundaries.append((left_boundary, right_boundary))
+    #         left_boundary = right_boundary
+    #     self.set_sentences(sentence_boundaries)
+    #
+    #     # Sanity check: Do we have as many annotated tokens as tokens in the discourse?
+    #     if not len(self.tokens) == sum([len(anno) for anno in self.annotations.itervalues()]):
+    #         print 'Annotated tokens should match discourse tokens!'
+    #         print [[a['word'] for a in anno] for anno in self.annotations.itervalues()]
+    #         print [self.tokens[s[0]:s[1]] for s in self.sentences]
+
+    def load_tiger_syntax(self, tiger_trees):
+        """
+        Loading annotations from the syntax files
+        :param tiger_trees: Trees with syntactic information, see zwitscher.utils.tree.ConstituencyTree
+        :type tiger_trees: list
+        """
+        self.syntax = tiger_trees
+        # Setting the sentences as they are given by the trees
+        sentence_boundaries = []
+        left_boundary = 0
+        for tree in self.syntax:
+            right_boundary = left_boundary + len(tree.terminals)
+            sentence_boundaries.append((left_boundary, right_boundary))
+            left_boundary = right_boundary
+        self.set_sentences(sentence_boundaries)
+
+        # Sanity check: Do we have as many annotated tokens as tokens in the discourse?
+        if not len(self.tokens) == sum([len(tree.terminals) for tree in self.syntax]):
+            print 'Total number of annotated tokens from syntax trees should match discourse tokens!'
+            print [[a['word'] for a in anno] for anno in self.annotations.itervalues()]
+            print [self.tokens[s[0]:s[1]] for s in self.sentences]
+
 
     def get_connective_text(self, connective):
         """
