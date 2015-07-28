@@ -76,6 +76,40 @@ def discourse_connective_text_featurizer(sents, nested_connective_positions,
         results[feature_name] = feature_fct(sents, nested_connective_positions)
     return results
 
+
+def node_featurizer(node, sent, connective_pos, tree,
+                    features=['connective_lexical', 'nr_of_left_siblings', 'nr_of_right_siblings',
+                              'path_to_node', 'relative_pos_of_N_to_C'],
+                    dimlex_path=os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')):
+    results = dict()
+    for feature in features:
+        if isinstance(feature, basestring):
+            feature_name = feature
+            if feature == 'connective_lexical':
+                assert dimlex_path, 'Need to specify location of dimlex'
+                dimlex = load_dimlex(dimlex_path)
+                # create a function that transforms a text and connective_pos into the lexicon entry
+                feature_fct = lambda n, s, c, t: connective_lexical(connective_raw_flat(s, c), lexicon=dimlex)
+            elif feature == 'nr_of_left_C_siblings':
+                feature_fct = lambda n, s, c, t: siblings(t[c[0]], own_pos=c, direction='left')  # Fixme: use the full c
+            elif feature == 'nr_of_right_C_siblings':
+                feature_fct = lambda n, s, c, t: siblings(t[c[0]], own_pos=c, direction='right')  # Fixme: use the full c
+            elif feature == 'path_to_node':
+                feature_fct = lambda n, s, c, t: t.terminals[c[0]].path_to_other(n)  # Fixme: use the full c
+            elif feature == 'relative_pos_of_N_to_C':
+                feature_fct = lambda n, s, c, t: relative_pos(n, t.terminals[c[0]])  # Fixme: use the full c
+            else:
+                raise ValueError('%s is an unknown feature' % feature)
+        else:
+            feature_fct = feature
+            feature_name = feature.__name__
+        results[feature_name] = feature_fct(node, sent, connective_pos, tree)
+    return results
+
+#########################################
+#### All the actual feature methods #####
+#########################################
+
 def chunk_connective(nested_connective_positions):
     """ Helper to chunk a connective into its continuous parts
 
@@ -107,6 +141,7 @@ def chunk_connective(nested_connective_positions):
     chunks.append(current_chunk)
     return chunks
 
+
 def connective_raw(sents, nested_connective_positions):
     """ Helper to calculate the raw connective from the text and the positions
 
@@ -117,6 +152,21 @@ def connective_raw(sents, nested_connective_positions):
     """
     chunks = chunk_connective(nested_connective_positions)
     return '_'.join([' '.join([sents[sent][tok] for (sent, tok) in chunk]) for chunk in chunks])
+
+
+def connective_raw_flat(sent, indices):
+    """ Helper to get the raw connective from within a sentence
+
+    :param sent:
+    :type sent:
+    :param indices:
+    :type indices:
+    :return: concatenate the strings. Discontinuous jumps are concatenated with a '_'
+    :rtype: basestring
+    """
+    sents = [sent]
+    nested_indices = [(0, i) for i in indices]
+    return  connective_raw(sents, nested_indices)
 
 
 def connective_lexical(connective_raw, lexicon):
@@ -184,6 +234,7 @@ def sent_length(sents, nested_connective_positions, direction='prev'):
             # There is no next sentence
             return 0
 
+
 def number_of_tokens(sents, nested_connective_positions, direction='before'):
     """ Feature function
 
@@ -225,6 +276,7 @@ def number_of_tokens(sents, nested_connective_positions, direction='before'):
         else:
             return None
 
+
 def token(sents, nested_connective_positions, direction=0):
     """ Feature function
 
@@ -253,3 +305,41 @@ def token(sents, nested_connective_positions, direction=0):
         return '.'
     else:
         return sents[sent][pos + direction]
+
+
+def siblings(terminal, own_pos=None, direction='left'):
+    """ Feature function
+
+    Counts how many siblings there are
+    :param terminal: The terminal in question
+    :type terminal: zwitscher.utils.tree.Node
+    :param direction:
+    :type direction: basestring
+    :return: Number of siblings
+    :rtype: int
+    """
+    if own_pos is None:
+        own_pos = terminal.tree.terminals.index(terminal)
+    siblings_positions = terminal.parent.terminal_indices()
+    if direction == 'left':
+        directed_sibs = [sib for sib in siblings_positions if sib < own_pos]
+    elif direction == 'right':
+        directed_sibs = [sib for sib in siblings_positions if sib > own_pos]
+    else:
+        raise ValueError('Need to call with direction "left" or "right"')
+    return len(directed_sibs)
+
+
+def relative_pos(node, connective_positions):
+    """ Feature function
+
+    Returns whether more descendants of the node are to the right or left
+        or the terminal node is in the center
+    :param node:
+    :type node: zwitscher.utils.tree.Node
+    :param connective_positions: positions of the connective in the sentence
+    :type connective_positions: list
+    :return: 'left', 'center', 'right'
+    :rtype: basestring
+    """
+    node.terminal_indices()

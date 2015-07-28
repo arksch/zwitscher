@@ -45,6 +45,17 @@ class ConstituencyTree():
                 self.terminals.append(Node(node_soup=sent_soup.find(id=t_id),
                                            sent_soup=sent_soup, parent=None, tree=self))
 
+    def iter_nodes(self, include_terminals=False):
+        nodes = [self.root]
+        while len(nodes) > 0:
+            node = nodes.pop(0)
+            if include_terminals:
+                nodes.extend(node.children)
+            else:
+                nodes.extend([child for child in node.children
+                              if not child.terminal])
+            yield node
+
     def path_to_root(self, terminal_index):
         """
         Gives the categories of the path to the root
@@ -78,8 +89,11 @@ class Node():
         self.parent = parent
         self.tree = tree
         self.tree.id_dict[self.id] = self
+        self.arg1_proba = 0.0
+        self.arg0_proba = 0.0
+        self.children = []
+        self.terminal = False
         if node_soup.name == 'nt':
-            self.terminal = False
             self.cat = node_soup['cat']
             #try:
             self.children = [Node(node_soup=sent_soup.find(id=edge['idref']),
@@ -112,4 +126,67 @@ class Node():
                       (self.id, self.tree.id, str([child.id for child in self.children]), self.cat)
         return fmt
 
+    def path_to_root(self):
+        """ Constructs shortest path from this node to the root
+
+        :return: categories of the intermediate nodes
+        :rtype: list
+        """
+        cat_path = []
+        node = self
+        while node.parent is not None:
+            cat_path.append(node.parent.cat)
+            node = node.parent
+        return cat_path
+
+    def path_from_root(self):
+        path = self.path_to_root()
+        path.reverse()
+        return path
+
+    def path_to_other(self, node):
+        """ Constructs shortest path from a terminal to this node
+
+        :param node: other node (should be from the same tree)
+        :type node: Node
+        :return: categories of the intermediate nodes
+        :rtype: list
+        """
+        my_path = self.path_to_root()
+        other_path = node.path_to_root()
+        while len(my_path) > 0 and len(other_path) > 0:
+            if my_path[-1] == other_path[-1]:
+                my_path.pop(-1)
+                other_path.pop(-1)
+        other_path.reverse()
+        my_path.extend(other_path)
+        return my_path
+
+    def path_from_other(self, node):
+        path = self.path_to_other(node)
+        path.reverse()
+        return path
+
+    def terminals(self):
+        """ Gets all the terminal descendants of this node
+
+        :return: a list of terminal nodes
+        :rtype: list
+        """
+        terminals = []
+        children = self.children
+        for child in children:
+            if child.terminal:
+                terminals.append(child)
+            else:
+                children.extend(child.children)
+        return terminals
+
+    def terminal_indices(self):
+        """ Gets the indices of the terminal descendants of this node
+
+        :return: The indices in the sentence
+        :rtype: list
+        """
+        return [self.tree.terminals.index(ter) for ter in self.terminals()]
 

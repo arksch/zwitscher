@@ -10,7 +10,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.cross_validation import cross_val_score
 from sklearn.ensemble import RandomForestClassifier
 
-from utils.PCC import load_connectors as load_pcc
+from utils.PCC import load_connectors
 from gold_standard import pcc_to_gold
 from features import discourse_connective_text_featurizer
 
@@ -20,9 +20,10 @@ __author__ = 'arkadi'
 def load_data(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
                                'potsdam-commentary-corpus-2.0.0/connectors'):
     # Load PCC data
-    pcc = load_pcc(connector_folder)
+    pcc = load_connectors(connector_folder)
     # creating a pd.DataFrame
     return pcc_to_gold(pcc)
+
 
 def clean_data(dataframe):
     """ Transforms all Nones int np.NaN and drops rows where connective_position or sentences is NaN
@@ -35,6 +36,7 @@ def clean_data(dataframe):
     dataframe[dataframe.isnull()] = np.NaN
     dataframe = dataframe.dropna(subset=['connective_positions', 'sentences'])
     return dataframe
+
 
 def featurize_data(dataframe, feature_function):
     """ Creates features as specified by the featurizer that creates a feature dict from
@@ -97,18 +99,67 @@ def learn_sentdist(clean_pcc,
     return clf, scores, le
 
 
+def same_sentence(clean_pcc):
+    """ Filter out those connectives that have the argument in the same sentence
+
+    :param clean_pcc:
+    :type clean_pcc: pd.DataFrame
+    :return:
+    :rtype: pd.DataFrame
+    """
+    return clean_pcc[clean_pcc['sentence_dist'] == 0]
+
+
+def connective_to_nodes(same_sent_pcc):
+    """ Get all the nodes from the pcc dataframe
+
+    :param same_sent_pcc:
+    :type same_sent_pcc: pd.DataFrame
+    :return: Dataframe with nodes as index and arg0, arg1, connective_positions,
+    sentence and syntax as columns
+    :rtype: pd.DataFrame
+    """
+    data = {}
+    for i in range(0, len(same_sent_pcc)):
+        conn_series = same_sent_pcc.iloc[i, :]
+        sent = conn_series['connective_positions'][0][0]
+        syntax_tree = conn_series['syntax'][sent]
+        connective_pos = [tok for sent, tok in conn_series['connective_positions']]
+        node_data = {'sentence': conn_series['sentences'][sent],
+                     'arg0': conn_series['arg0'],
+                     'arg1': conn_series['arg1'],
+                     'connective_positions': connective_pos,
+                     'syntax': syntax_tree}
+        for node in syntax_tree.iter_nodes():
+            data[node] = node_data
+    return pd.DataFrame().from_dict(data, orient='index')
+
+
 def learn_main_arg_node(clean_pcc,
                           feature_list=['connective_lexical', 'length_connective',
                                         'length_prev_sent', 'length_same_sent', 'length_next_sent',
                                         'tokens_before', 'tokens_after', 'tokens_between'],
                           internal_argument=True):
-    # ToDo: Filter out connectives with arguments in the same sentence
+    same_sentence_connectives = same_sentence(clean_pcc)
+    node_df = connective_to_nodes(same_sentence_connectives)
+
+    # ToDo: Design features (see Lin et al p. 17, Connective_syntactic!)
+    # ToDo: Chose the correct nodes (by some heuristic: first chose the node that maximizes the overlap between prediction and true)
     # ToDo: Train a logistic regression classifier on all the nodes of the given sentences
+
     # http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html
     # ToDo: Implement method to find nodes with maximal probability
-    # ToDo: Implement tree subtraction
 
-    # ToDo: Evaluate this method
-    # ToDo: Get baseline by labeling everything after the connective as arg0, everything else as arg1
-    # ToDo: Get baseline for previous sentence by labeling the full sentence as arg1.
+    # ToDo: Evaluate this method (remember not to count punctuation)
+    # ToDo: Get baseline by labeling everything after the connective as
+    # arg0, everything else as arg1
+    # ToDo: Get baseline for previous sentence by labeling the full sentence
+    #  as arg1.
+
+    # ToDo: Try to use a random forest classifier as well
+
+    # ToDo: Implement tree subtraction (for this need to refine the finding of the correct nodes)
+    # ToDo: Or find another method that trains with a scoring method. Write evaluation method on node base (given the optimal other argument, if we wrap over it its fine, else penalize)
+
+
     return clf, scores, le
