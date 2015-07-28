@@ -158,6 +158,8 @@ class Node():
             if my_path[-1] == other_path[-1]:
                 my_path.pop(-1)
                 other_path.pop(-1)
+            else:
+                break
         other_path.reverse()
         my_path.extend(other_path)
         return my_path

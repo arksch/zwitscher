@@ -5,6 +5,7 @@ This module includes feature methods to create features from discourse connectiv
 their argument positions
 """
 import re
+import sys
 import os.path
 
 import pandas as pd
@@ -78,32 +79,33 @@ def discourse_connective_text_featurizer(sents, nested_connective_positions,
 
 
 def node_featurizer(node, sent, connective_pos, tree,
-                    features=['connective_lexical', 'nr_of_left_siblings', 'nr_of_right_siblings',
+                    feature_list=['connective_lexical', 'nr_of_left_C_siblings', 'nr_of_right_C_siblings',
                               'path_to_node', 'relative_pos_of_N_to_C'],
                     dimlex_path=os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')):
     results = dict()
-    for feature in features:
+    for feature in feature_list:
         if isinstance(feature, basestring):
             feature_name = feature
             if feature == 'connective_lexical':
                 assert dimlex_path, 'Need to specify location of dimlex'
                 dimlex = load_dimlex(dimlex_path)
                 # create a function that transforms a text and connective_pos into the lexicon entry
-                feature_fct = lambda n, s, c, t: connective_lexical(connective_raw_flat(s, c), lexicon=dimlex)
+                feature_fct = lambda n, s, c, t: connective_lexical(connective_raw_flat(s, c), lexicon=dimlex)  # Fixme: slow!
             elif feature == 'nr_of_left_C_siblings':
-                feature_fct = lambda n, s, c, t: siblings(t[c[0]], own_pos=c, direction='left')  # Fixme: use the full c
+                feature_fct = lambda n, s, c, t: siblings(t.terminals[c[0]], own_pos=c[0], direction='left')  # Fixme: slow! use the full c
             elif feature == 'nr_of_right_C_siblings':
-                feature_fct = lambda n, s, c, t: siblings(t[c[0]], own_pos=c, direction='right')  # Fixme: use the full c
+                feature_fct = lambda n, s, c, t: siblings(t.terminals[c[0]], own_pos=c[0], direction='right')  # Fixme: slow! use the full c
             elif feature == 'path_to_node':
-                feature_fct = lambda n, s, c, t: t.terminals[c[0]].path_to_other(n)  # Fixme: use the full c
+                feature_fct = lambda n, s, c, t: t.terminals[c[0]].path_to_other(n)  # Fixme: fast but seems to have odd results, use the full c
             elif feature == 'relative_pos_of_N_to_C':
-                feature_fct = lambda n, s, c, t: relative_pos(n, t.terminals[c[0]])  # Fixme: use the full c
+                feature_fct = lambda n, s, c, t: relative_pos(n, t.terminals[c[0]])  # Fixme: ives always NaN, use the full c
             else:
                 raise ValueError('%s is an unknown feature' % feature)
         else:
             feature_fct = feature
             feature_name = feature.__name__
         results[feature_name] = feature_fct(node, sent, connective_pos, tree)
+    sys.stdout.write('.')
     return results
 
 #########################################
@@ -343,3 +345,4 @@ def relative_pos(node, connective_positions):
     :rtype: basestring
     """
     node.terminal_indices()
+    # ToDo: Finish this

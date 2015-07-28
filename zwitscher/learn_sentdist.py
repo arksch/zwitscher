@@ -8,7 +8,7 @@ import uuid
 import pickle
 
 from gold_standard import pcc_to_gold
-from learn import load_data, clean_data, learn_sentdist
+from learn import load_gold_data, clean_data, learn_sentdist
 
 __author__ = 'arkadi'
 
@@ -59,7 +59,7 @@ def main(feature_list=['connective_lexical', 'length_connective',
             return
     else:
         print 'Parsing gold data from %s' % connector_folder
-        pcc_df = load_data(connector_folder)  # Loaded X and y into one dataframe
+        pcc_df = load_gold_data(connector_folder)  # Loaded X and y into one dataframe
     print 'Loaded data'
 
     print 'Cleaning data...'

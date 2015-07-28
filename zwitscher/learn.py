@@ -12,12 +12,12 @@ from sklearn.ensemble import RandomForestClassifier
 
 from utils.PCC import load_connectors
 from gold_standard import pcc_to_gold
-from features import discourse_connective_text_featurizer
+from features import discourse_connective_text_featurizer, node_featurizer
 
 __author__ = 'arkadi'
 
 
-def load_data(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
+def load_gold_data(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
                                'potsdam-commentary-corpus-2.0.0/connectors'):
     # Load PCC data
     pcc = load_connectors(connector_folder)
@@ -38,7 +38,7 @@ def clean_data(dataframe):
     return dataframe
 
 
-def featurize_data(dataframe, feature_function):
+def featurize_sentdist_data(dataframe, feature_function):
     """ Creates features as specified by the featurizer that creates a feature dict from
     sentences and connective positions
 
@@ -51,6 +51,27 @@ def featurize_data(dataframe, feature_function):
     """
     features = dataframe.apply(lambda row: pd.Series(feature_function(row['sentences'], row['connective_positions'])),
                                axis=1, reduce=False)
+    return features
+
+
+def featurize_node_data(dataframe, feature_function):
+    """ Creates features as specified by the featurizer that creates a feature dict from
+    sentences and connective positions
+
+    Sentences are a list of lists with tokens
+    Connective positions is a list with pairs of sentence and token indices
+    :param dataframe: data with columns 'sentences' and 'connective_positions'
+    :type dataframe: pd.DataFrame
+    :return: features
+    :rtype: pd.DataFrame
+    """
+    def row_reduce(row):
+        ser = pd.Series(feature_function(row['node'],
+                                         row['sentence'],
+                                         row['connective_positions'],
+                                         row['syntax']))
+        return ser
+    features = dataframe.apply(lambda row: row_reduce(row), axis=1, reduce=False)
     return features
 
 
@@ -74,7 +95,7 @@ def learn_sentdist(clean_pcc,
     # Taking our favorite featurizer
     featurizer = lambda sents, conn_pos: discourse_connective_text_featurizer(sents, conn_pos,
                                                                               feature_list=feature_list)
-    features = featurize_data(clean_pcc, featurizer)  # Got features of X
+    features = featurize_sentdist_data(clean_pcc, featurizer)  # Got features of X
     print 'Calculated all features'
 
     # We need to encode the non-numerical labels
@@ -120,6 +141,7 @@ def connective_to_nodes(same_sent_pcc):
     :rtype: pd.DataFrame
     """
     data = {}
+    index = 1
     for i in range(0, len(same_sent_pcc)):
         conn_series = same_sent_pcc.iloc[i, :]
         sent = conn_series['connective_positions'][0][0]
@@ -131,18 +153,29 @@ def connective_to_nodes(same_sent_pcc):
                      'connective_positions': connective_pos,
                      'syntax': syntax_tree}
         for node in syntax_tree.iter_nodes():
-            data[node] = node_data
+            # Don't have this as a index, since it is easier to access this way
+            node_data['node'] = node
+            data[index] = node_data
+            index += 1
     return pd.DataFrame().from_dict(data, orient='index')
 
 
-def learn_main_arg_node(clean_pcc,
-                          feature_list=['connective_lexical', 'length_connective',
-                                        'length_prev_sent', 'length_same_sent', 'length_next_sent',
-                                        'tokens_before', 'tokens_after', 'tokens_between'],
-                          internal_argument=True):
-    same_sentence_connectives = same_sentence(clean_pcc)
-    node_df = connective_to_nodes(same_sentence_connectives)
+def learn_main_arg_node(node_df,
+                          feature_list=['connective_lexical',
+                                        'nr_of_left_C_siblings',
+                                        'nr_of_right_C_siblings',
+                                        'path_to_node',
+                                        'relative_pos_of_N_to_C'],
+                          internal_argument=True,
+                          label_features=['connective_lexical', 'path_to_node', 'relative_pos_of_N_to_C']):
+    def featurizer(node, sent, connective_pos, tree):
+        return node_featurizer(node, sent, connective_pos, tree,
+                               feature_list=feature_list)
 
+    print 'Calculating features'
+    features = featurize_node_data(node_df, featurizer)  # Got features of X
+    print 'done'
+    import ipdb; ipdb.set_trace()
     # ToDo: Design features (see Lin et al p. 17, Connective_syntactic!)
     # ToDo: Chose the correct nodes (by some heuristic: first chose the node that maximizes the overlap between prediction and true)
     # ToDo: Train a logistic regression classifier on all the nodes of the given sentences
@@ -163,3 +196,6 @@ def learn_main_arg_node(clean_pcc,
 
 
     return clf, scores, le
+
+if __name__ == '__main__':
+    learn_main_arg_node()
