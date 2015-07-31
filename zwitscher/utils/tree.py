@@ -21,16 +21,17 @@ class ConstituencyTree():
         :param tiger_xml: The xml string of one sentence
         :type tiger_xml: basestring
         """
-        self.id = None
+        self.id_str = None
         self.id_dict = {}  # Mapping IDs to nodes
         self.root_id = None
         self.root = None
         self.terminals = []
+        self.nodes = []
         self._parse_tiger_xml(tiger_xml)
 
     def _parse_tiger_xml(self, tiger_xml):
         sent_soup = BeautifulSoup(tiger_xml)
-        self.id = sent_soup.find('s')['id']
+        self.id_str = sent_soup.find('s')['id']
         self.root_id = sent_soup.find('graph')['root']
         root_soup = sent_soup.find(id=self.root_id)
         self.root = Node(node_soup=root_soup, sent_soup=sent_soup, parent=None, tree=self)
@@ -51,15 +52,9 @@ class ConstituencyTree():
         :param include_terminals: Iterate over non-terminal nodes as well?
         :type include_terminals: bool
         """
-        nodes = [self.root]
-        while len(nodes) > 0:
-            node = nodes.pop(0)
-            if include_terminals:
-                nodes.extend(node.children)
-            else:
-                nodes.extend([child for child in node.children
-                              if not child.terminal])
-            yield node
+        for node in self.nodes:
+            if not node.terminal:
+                yield node
 
     def path_to_root(self, terminal_index):
         """
@@ -90,10 +85,11 @@ class ConstituencyTree():
 class Node():
 
     def __init__(self, node_soup=None, sent_soup=None, parent=None, tree=None):
-        self.id = node_soup['id']
+        self.id_str = node_soup['id']
         self.parent = parent
         self.tree = tree
-        self.tree.id_dict[self.id] = self
+        self.tree.id_dict[self.id_str] = self
+        self.tree.nodes.append(self)
         self.arg0 = False  # From the gold standard
         self.arg1 = False
         self.arg1_proba = 0.0  # From the classifier
@@ -118,21 +114,21 @@ class Node():
     def __unicode__(self):
         if self.terminal:
             if self.parent is not None:
-                fmt = u'<Terminal node %s in sentence %s with parent %s: "%s"-%s>' % (self.id,
-                                                                                      self.tree.id,
-                                                                                      self.parent.id,
+                fmt = u'<Terminal node %s in sentence %s with parent %s: "%s"-%s>' % (self.id_str,
+                                                                                      self.tree.id_str,
+                                                                                      self.parent.id_str,
                                                                                       self.word,
                                                                                       self.pos)
             else:
-                fmt = u'<Terminal node %s in sentence %s with no parent: "%s"-%s>' % (self.id, self.tree.id,
+                fmt = u'<Terminal node %s in sentence %s with no parent: "%s"-%s>' % (self.id_str, self.tree.id_str,
                                                                                       self.word, self.pos)
         else:
             if self.parent is not None:
                 fmt = u'<Non-terminal node %s in sentence %s with parent %s and children %s: %s>' %\
-                      (self.id, self.tree.id, self.parent.id, str([child.id for child in self.children]), self.cat)
+                      (self.id_str, self.tree.id_str, self.parent.id_str, str([child.id_str for child in self.children]), self.cat)
             else:
                 fmt = u'<Root node %s in sentence %s with children %s: %s>' % \
-                      (self.id, self.tree.id, str([child.id for child in self.children]), self.cat)
+                      (self.id_str, self.tree.id_str, str([child.id_str for child in self.children]), self.cat)
         return fmt
 
     def path_to_root(self):
@@ -179,8 +175,8 @@ class Node():
         return path
 
     def position_in_sentence(self):
-        terminal_indices = [ter.id for ter in self.tree.terminals]
-        return terminal_indices.index(self.id)
+        terminal_indices = [ter.id_str for ter in self.tree.terminals]
+        return terminal_indices.index(self.id_str)
 
     def terminals(self):
         """ Gets all the terminal descendants of this node

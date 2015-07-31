@@ -218,7 +218,7 @@ class LexConnective(object):
     This class bundles general information about connectives, as they are in the dimlex lexicon.
     """
     def __init__(self):
-        self.id = ''
+        self.id_str = ''
         self.disambi = True
         self.canonical = ''
         self.orths = []  # List with orthographical variants. Discontinous "entweder_oder"

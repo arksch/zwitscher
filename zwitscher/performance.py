@@ -28,7 +28,7 @@ nodes = [list(tree.iter_nodes()) for tree in trees]
 if __name__ == '__main__':
     # Finding with IDs is about 10 times faster
     print 'node.position in tree with ID'
-    print timeit.timeit('for terminal in terminals: [ter.id for ter in terminal.tree.terminals].index(terminal.id)',
+    print timeit.timeit('for terminal in terminals: [ter.id_str for ter in terminal.tree.terminals].index(terminal.id_str)',
                   setup='from __main__ import terminals', number=1)
     print 'node.position in tree with node'
     print timeit.timeit('for terminal in terminals: terminal.tree.terminals.index(terminal)',

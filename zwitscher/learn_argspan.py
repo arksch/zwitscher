@@ -70,7 +70,12 @@ def main(feature_list=['connective_lexical',
 
     same_sentence_connectives = same_sentence(clean_pcc)
     node_gold_df, node_dict = pcc_to_arg_node_gold(same_sentence_connectives, syntax_dict)
-    # import ipdb; ipdb.set_trace()
+    print '%i incorrectly parsed trees' % len([tree for tree in syntax_dict.values() if isinstance(tree, basestring)])
+    print '%i incorrectly parsed nodes' % len(
+        [node for node in node_dict.values() if
+         isinstance(node, basestring)])
+    print node_gold_df.head()
+    import ipdb; ipdb.set_trace()
     print 'Cleaned data'
 
 

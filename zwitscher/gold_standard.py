@@ -28,8 +28,8 @@ def pcc_to_gold(pcc):
         sent_to_index = dict([(i, sent) for sent, i in enumerate(disc.sentences)])
         syntax_ids = []
         for tree in disc.syntax:
-            syntax_dict[tree.id] = tree
-            syntax_ids.append(tree.id)  # Keep it sorted!
+            syntax_dict[tree.id_str] = tree
+            syntax_ids.append(tree.id_str)  # Keep it sorted!
         for conn in disc.connectives:
             # This is just the index in the whole text. We want a pair of sent,token indices
             nested_positions = flat_index_to_nested(disc.sentences, conn.positions, sent_to_index_dict=sent_to_index)

@@ -73,9 +73,9 @@ class SyntaxGoldTestCase(unittest.TestCase):
 
         for node in tree.iter_nodes():
             if node.arg1:
-                assert node.id == 's2173_507'
+                assert node.id_str == 's2173_507'
             if node.arg0:
-                assert node.id == 's2173_506'
+                assert node.id_str == 's2173_506'
 
 
 

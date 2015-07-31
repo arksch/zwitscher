@@ -30,7 +30,7 @@ class TreeTestCase(unittest.TestCase):
     def test_fields_tree(self):
         tree = self.trees[4]
 
-        assert tree.id == 's2169'
+        assert tree.id_str == 's2169'
 
         assert unicode(tree.root) == "<Root node s2169_502 in sentence s2169 with children ['s2169_5', " +\
                                      "'s2169_6', 's2169_7', 's2169_501']: S>"
@@ -74,7 +74,7 @@ class TreeTestCase(unittest.TestCase):
         node1 = big_tree.terminals[0]
         node2 = big_tree.terminals[13].parent
 
-        assert big_tree.id == 's2170'
+        assert big_tree.id_str == 's2170'
 
         assert node1.path_to_root() == ['NP', 'S']
         assert node2.path_from_root() == ['S', 'NP', 'S', 'VP', 'VP']

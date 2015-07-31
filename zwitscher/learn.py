@@ -145,9 +145,8 @@ def pcc_to_arg_node_gold(same_sent_pcc, syntax_dict):
     data = {}
     index = 0
     node_dict = dict()
-    node_nrs = []
-    tree_count = 0
     for i in range(0, len(same_sent_pcc)):
+        sent_data = {}
         conn_series = same_sent_pcc.iloc[i, :]
         conn_nested_pos = conn_series['connective_positions']
         sents = [sent for (sent, tok) in conn_nested_pos]
@@ -172,17 +171,17 @@ def pcc_to_arg_node_gold(same_sent_pcc, syntax_dict):
                      'arg1': insent_arg1,
                      'connective_positions': connective_pos,
                      'syntax_id': syntax_id}
-        tree_count += 1
-        node_nrs.append(len(list(syntax_tree.iter_nodes())))
-        for node in set(list(syntax_tree.iter_nodes(include_terminals=False))):
+        for node in [node for node in syntax_tree.nodes if not node.terminal]:
+        #for node in set(list(syntax_tree.iter_nodes(include_terminals=False))):
             # Don't have node as a index, since it is easier to access with int
-            node_id = node.id
+            node_data = {}
+            node_id = node.id_str
             node_dict[node_id] = node
-            node_data = sent_data
+            node_data.update(sent_data)
             node_data['node_id'] = node_id
             node_data['is_arg0_node'] = node.arg0
             node_data['is_arg1_node'] = node.arg1
-            data[index] = node_data
+            data[node_id] = node_data
             index += 1
     return pd.DataFrame().from_dict(data, orient='index'), node_dict
 

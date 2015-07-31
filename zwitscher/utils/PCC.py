@@ -197,7 +197,7 @@ def parse_syntax(xml_text):
     for sent_xml in sentences_xml:
         annotations.append(ConstituencyTree(str(sent_xml)))
     # Sort the output just in case
-    # annotations = sorted(annotations, key=lambda tree: int(tree.id[1:]))  # ids are of the form s1234
+    # annotations = sorted(annotations, key=lambda tree: int(tree.id_str[1:]))  # ids are of the form s1234
     return annotations
 
 
