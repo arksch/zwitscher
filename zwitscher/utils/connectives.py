@@ -90,7 +90,7 @@ class Discourse(object):
         self.rawtext = ""
         self.tokens = list()
         self.sentences = list()  # A list of tuples with start and end points
-        self.connectives = list()  # This is a quadruple of a connective, its position and its argument spans
+        self.connectives = list()  # A list of DiscConnective objects
         self.annotations = {}
         self.syntax = []  # A list with ConstituencyTrees for each sentence
 

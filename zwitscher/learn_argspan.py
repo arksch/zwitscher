@@ -10,16 +10,18 @@ import pickle
 
 from gold_standard import pcc_to_gold
 from learn import load_gold_data, clean_data, same_sentence, \
-    connective_to_nodes, learn_main_arg_node
+    pcc_to_arg_node_gold, learn_main_arg_node
 
 __author__ = 'arkadi'
 
 # ToDo: Clickify this!
 def main(feature_list=['connective_lexical',
-                     'nr_of_left_C_siblings',
-                     'nr_of_right_C_siblings',
+                       'nr_of_siblings',
+                     #'nr_of_left_C_siblings',
+                     #'nr_of_right_C_siblings',
                      'path_to_node',
-                     'relative_pos_of_N_to_C'
+                     'node_cat',
+                     #'relative_pos_of_N_to_C'
                      ],
          label_features=['connective_lexical'],
          connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
@@ -54,26 +56,28 @@ def main(feature_list=['connective_lexical',
         print 'Unpickling gold data from %s' % os.path.join(pickle_folder, 'PCC_disc.pickle')
         if os.path.exists(os.path.join(pickle_folder, 'PCC_disc.pickle')):
             with open(os.path.join(pickle_folder, 'PCC_disc.pickle'), 'rb') as f:
-                pcc_df = pcc_to_gold(pickle.load(f))
+                pcc_df, syntax_dict = pcc_to_gold(pickle.load(f))
         else:
             print 'Could not find file %s' % os.path.join(pickle_folder, 'PCC_disc.pickle')
             return
     else:
         print 'Parsing gold data from %s' % connector_folder
-        pcc_df = load_gold_data(connector_folder)  # Loaded X and y into one dataframe
+        pcc_df, syntax_dict = load_gold_data(connector_folder)  # Loaded X and y into one dataframe
     print 'Loaded data'
 
     print 'Cleaning data...'
     clean_pcc = clean_data(pcc_df)
 
     same_sentence_connectives = same_sentence(clean_pcc)
-    node_df = connective_to_nodes(same_sentence_connectives)
+    node_gold_df, node_dict = pcc_to_arg_node_gold(same_sentence_connectives, syntax_dict)
+    # import ipdb; ipdb.set_trace()
     print 'Cleaned data'
 
 
-    clf, scores, le = learn_main_arg_node(node_df, feature_list=feature_list,
+    clf, scores, le = learn_main_arg_node(node_gold_df, syntax_dict, node_dict,
+                                          feature_list=feature_list,
                                           label_features=label_features)
 
 
 if __name__ == '__main__':
-    main(unpickle_gold=True)
+    main(unpickle_gold=False)

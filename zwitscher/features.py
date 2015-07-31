@@ -79,9 +79,13 @@ def discourse_connective_text_featurizer(sents, nested_connective_positions,
 
 
 def node_featurizer(node, sent, connective_pos, tree,
-                    feature_list=['connective_lexical', 'nr_of_left_C_siblings', 'nr_of_right_C_siblings',
-                              'path_to_node', 'relative_pos_of_N_to_C'],
+                    feature_list=['connective_lexical', 'nr_of_C_siblings', 'nr_of_left_C_siblings', 'nr_of_right_C_siblings',
+                              'node_cat', 'path_to_node', 'relative_pos_of_N_to_C'],
+                    syntax_dict=None,
+                    node_dict=None,
                     dimlex_path=os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')):
+    if syntax_dict is None or node_dict is None:
+        raise ValueError('Need syntax and node dict to look up values')
     results = dict()
     for feature in feature_list:
         if isinstance(feature, basestring):
@@ -91,14 +95,22 @@ def node_featurizer(node, sent, connective_pos, tree,
                 dimlex = load_dimlex(dimlex_path)
                 # create a function that transforms a text and connective_pos into the lexicon entry
                 feature_fct = lambda n, s, c, t: connective_lexical(connective_raw_flat(s, c), lexicon=dimlex)  # Fixme: slow!
+            elif feature == 'nr_of_siblings':
+                feature_fct = lambda n, s, c, t: siblings(syntax_dict[t].terminals[c[0]],
+                                                          own_pos=c[0],
+                                                          direction='any')
             elif feature == 'nr_of_left_C_siblings':
-                feature_fct = lambda n, s, c, t: siblings(t.terminals[c[0]], own_pos=c[0], direction='left')  # Fixme: slow! use the full c
+                feature_fct = lambda n, s, c, t: siblings(syntax_dict[t].terminals[c[0]], own_pos=c[0], direction='left')  # Fixme: slow! use the full c
             elif feature == 'nr_of_right_C_siblings':
-                feature_fct = lambda n, s, c, t: siblings(t.terminals[c[0]], own_pos=c[0], direction='right')  # Fixme: slow! use the full c
+                feature_fct = lambda n, s, c, t: siblings(syntax_dict[t].terminals[c[0]], own_pos=c[0], direction='right')  # Fixme: slow! use the full c
+            elif feature == 'node_cat':
+                feature_fct = lambda n, s, c, t: node_dict[n].cat
             elif feature == 'path_to_node':
-                feature_fct = lambda n, s, c, t: t.terminals[c[0]].path_to_other(n)  # Fixme: fast but seems to have odd results, use the full c
+                feature_fct = lambda n, s, c, t: (syntax_dict[t]
+                                                  .terminals[c[0]]
+                                                  .path_to_other(node_dict[n]))  # Fixme: fast but seems to have odd results, use the full c
             elif feature == 'relative_pos_of_N_to_C':
-                feature_fct = lambda n, s, c, t: relative_pos(n, t.terminals[c[0]])  # Fixme: ives always NaN, use the full c
+                feature_fct = lambda n, s, c, t: relative_pos(node_dict[n], syntax_dict[t].terminals[c[0]])  # Fixme: ives always NaN, use the full c
             else:
                 raise ValueError('%s is an unknown feature' % feature)
         else:
@@ -313,6 +325,8 @@ def siblings(terminal, own_pos=None, direction='left'):
     """ Feature function
 
     Counts how many siblings there are
+    Currently not using left or right directions, since finding the positions
+    seems to use a lot of computational power
     :param terminal: The terminal in question
     :type terminal: zwitscher.utils.tree.Node
     :param direction:
@@ -320,9 +334,14 @@ def siblings(terminal, own_pos=None, direction='left'):
     :return: Number of siblings
     :rtype: int
     """
+    if terminal.parent is None:
+        return 0
+    if direction == 'any':
+        return len(terminal.parent.terminals())
     if own_pos is None:
-        own_pos = terminal.tree.terminals.index(terminal)
-    siblings_positions = terminal.parent.terminal_indices()
+        own_pos = terminal.position_in_sentence()
+    siblings = terminal.parent.terminals()  # Not all children are terminals
+    siblings_positions = [node.position_in_sentence() for node in siblings]
     if direction == 'left':
         directed_sibs = [sib for sib in siblings_positions if sib < own_pos]
     elif direction == 'right':
@@ -341,8 +360,17 @@ def relative_pos(node, connective_positions):
     :type node: zwitscher.utils.tree.Node
     :param connective_positions: positions of the connective in the sentence
     :type connective_positions: list
-    :return: 'left', 'center', 'right'
+    :return: 'left', 'center', 'right', 'outside
     :rtype: basestring
     """
-    node.terminal_indices()
-    # ToDo: Finish this
+    descendants = node.terminal_indices()
+    if not connective_positions in descendants:
+        return 'outside'
+    conn_ix = descendants.index(connective_positions)
+    descendants_nr = len(descendants)
+    if descendants_nr == 2 * conn_ix + 1:
+        return 'center'
+    elif descendants_nr < 2 * conn_ix + 1:
+        return 'right'
+    else:
+        return 'left'

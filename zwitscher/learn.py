@@ -11,7 +11,8 @@ from sklearn.cross_validation import cross_val_score
 from sklearn.ensemble import RandomForestClassifier
 
 from utils.PCC import load_connectors
-from gold_standard import pcc_to_gold
+from utils.tree import ConstituencyTree
+from gold_standard import pcc_to_gold, label_arg_node
 from features import discourse_connective_text_featurizer, node_featurizer
 
 __author__ = 'arkadi'
@@ -66,10 +67,10 @@ def featurize_node_data(dataframe, feature_function):
     :rtype: pd.DataFrame
     """
     def row_reduce(row):
-        ser = pd.Series(feature_function(row['node'],
+        ser = pd.Series(feature_function(row['node_id'],
                                          row['sentence'],
                                          row['connective_positions'],
-                                         row['syntax']))
+                                         row['syntax_id']))
         return ser
     features = dataframe.apply(lambda row: row_reduce(row), axis=1, reduce=False)
     return features
@@ -131,51 +132,101 @@ def same_sentence(clean_pcc):
     return clean_pcc[clean_pcc['sentence_dist'] == 0]
 
 
-def connective_to_nodes(same_sent_pcc):
+def pcc_to_arg_node_gold(same_sent_pcc, syntax_dict):
     """ Get all the nodes from the pcc dataframe
 
     :param same_sent_pcc:
     :type same_sent_pcc: pd.DataFrame
     :return: Dataframe with nodes as index and arg0, arg1, connective_positions,
     sentence and syntax as columns
-    :rtype: pd.DataFrame
+    Also a node dict, since objects in pd.DataFrames seem to break
+    :rtype: pair
     """
     data = {}
-    index = 1
+    index = 0
+    node_dict = dict()
+    node_nrs = []
+    tree_count = 0
     for i in range(0, len(same_sent_pcc)):
         conn_series = same_sent_pcc.iloc[i, :]
-        sent = conn_series['connective_positions'][0][0]
-        syntax_tree = conn_series['syntax'][sent]
+        conn_nested_pos = conn_series['connective_positions']
+        sents = [sent for (sent, tok) in conn_nested_pos]
+        if len(set(sents)) != 1:
+            print 'Found %i sentences in %s' % (len(sents), str(conn_series))
+        sent = sents[0]
+        sentence = conn_series['sentences'][sent]
+        syntax_id = conn_series['syntax_ids'][sent]
+        syntax_tree = syntax_dict[syntax_id]
+        insent_arg0 = [tok for (sent, tok) in conn_series['arg0']]
+        insent_arg1 = [tok for (sent, tok) in conn_series['arg1']]
+        if not isinstance(syntax_tree, ConstituencyTree):
+            # Fixme: Apparantely there is some bug that makes a tree a string
+            print 'Found string %s instead of syntax tree' % str(syntax_tree)
+            continue
+        label_arg_node(insent_arg0, syntax_tree, label=0)
+        label_arg_node(insent_arg1, syntax_tree, label=1)
         connective_pos = [tok for sent, tok in conn_series['connective_positions']]
-        node_data = {'sentence': conn_series['sentences'][sent],
-                     'arg0': conn_series['arg0'],
-                     'arg1': conn_series['arg1'],
+        syntax_dict[syntax_id] = syntax_id
+        sent_data = {'sentence': sentence,
+                     'arg0': insent_arg0,
+                     'arg1': insent_arg1,
                      'connective_positions': connective_pos,
-                     'syntax': syntax_tree}
-        for node in syntax_tree.iter_nodes():
-            # Don't have this as a index, since it is easier to access this way
-            node_data['node'] = node
+                     'syntax_id': syntax_id}
+        tree_count += 1
+        node_nrs.append(len(list(syntax_tree.iter_nodes())))
+        for node in set(list(syntax_tree.iter_nodes(include_terminals=False))):
+            # Don't have node as a index, since it is easier to access with int
+            node_id = node.id
+            node_dict[node_id] = node
+            node_data = sent_data
+            node_data['node_id'] = node_id
+            node_data['is_arg0_node'] = node.arg0
+            node_data['is_arg1_node'] = node.arg1
             data[index] = node_data
             index += 1
-    return pd.DataFrame().from_dict(data, orient='index')
+    return pd.DataFrame().from_dict(data, orient='index'), node_dict
 
 
 def learn_main_arg_node(node_df,
+                        syntax_dict,
+                        node_dict,
                           feature_list=['connective_lexical',
-                                        'nr_of_left_C_siblings',
-                                        'nr_of_right_C_siblings',
+                                        'nr_of_siblings',
+                                        #'nr_of_left_C_siblings',
+                                        #'nr_of_right_C_siblings',
+                                        'node_cat',
                                         'path_to_node',
-                                        'relative_pos_of_N_to_C'],
+                                        #'relative_pos_of_N_to_C'
+                                        ],
                           internal_argument=True,
                           label_features=['connective_lexical', 'path_to_node', 'relative_pos_of_N_to_C']):
+    """ Learn a classifier for a node being arg0 or arg1
+
+    :param node_df: node data with tree and node ids
+    :type node_df: pd.DataFrame
+    :param syntax_dict: to look up the syntax trees by their id
+    :type syntax_dict:
+    :param node_dict: to look up the nodes by their id
+    :type node_dict:
+    :param feature_list:
+    :type feature_list:
+    :param internal_argument:
+    :type internal_argument:
+    :param label_features:
+    :type label_features:
+    :return:
+    :rtype:
+    """
     def featurizer(node, sent, connective_pos, tree):
         return node_featurizer(node, sent, connective_pos, tree,
+                               syntax_dict=syntax_dict,
+                               node_dict=node_dict,
                                feature_list=feature_list)
 
     print 'Calculating features'
+    import ipdb; ipdb.set_trace()
     features = featurize_node_data(node_df, featurizer)  # Got features of X
     print 'done'
-    import ipdb; ipdb.set_trace()
     # ToDo: Design features (see Lin et al p. 17, Connective_syntactic!)
     # ToDo: Chose the correct nodes (by some heuristic: first chose the node that maximizes the overlap between prediction and true)
     # ToDo: Train a logistic regression classifier on all the nodes of the given sentences

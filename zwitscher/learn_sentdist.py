@@ -53,13 +53,13 @@ def main(feature_list=['connective_lexical', 'length_connective',
         print 'Unpickling gold data from %s' % os.path.join(pickle_folder, 'PCC_disc.pickle')
         if os.path.exists(os.path.join(pickle_folder, 'PCC_disc.pickle')):
             with open(os.path.join(pickle_folder, 'PCC_disc.pickle'), 'rb') as f:
-                pcc_df = pcc_to_gold(pickle.load(f))
+                pcc_df, syntax_dict = pcc_to_gold(pickle.load(f))
         else:
             print 'Could not find file %s' % os.path.join(pickle_folder, 'PCC_disc.pickle')
             return
     else:
         print 'Parsing gold data from %s' % connector_folder
-        pcc_df = load_gold_data(connector_folder)  # Loaded X and y into one dataframe
+        pcc_df, syntax_dict = load_gold_data(connector_folder)  # Loaded X and y into one dataframe
     print 'Loaded data'
 
     print 'Cleaning data...'

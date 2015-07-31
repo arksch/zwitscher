@@ -46,6 +46,11 @@ class ConstituencyTree():
                                            sent_soup=sent_soup, parent=None, tree=self))
 
     def iter_nodes(self, include_terminals=False):
+        """ Iterator over the nodes in the tree
+
+        :param include_terminals: Iterate over non-terminal nodes as well?
+        :type include_terminals: bool
+        """
         nodes = [self.root]
         while len(nodes) > 0:
             node = nodes.pop(0)
@@ -89,10 +94,14 @@ class Node():
         self.parent = parent
         self.tree = tree
         self.tree.id_dict[self.id] = self
-        self.arg1_proba = 0.0
+        self.arg0 = False  # From the gold standard
+        self.arg1 = False
+        self.arg1_proba = 0.0  # From the classifier
         self.arg0_proba = 0.0
+        self.label = ''  # Any label to put
         self.children = []
         self.terminal = False
+        self.cat = 'None'
         if node_soup.name == 'nt':
             self.cat = node_soup['cat']
             #try:
@@ -168,6 +177,10 @@ class Node():
         path = self.path_to_other(node)
         path.reverse()
         return path
+
+    def position_in_sentence(self):
+        terminal_indices = [ter.id for ter in self.tree.terminals]
+        return terminal_indices.index(self.id)
 
     def terminals(self):
         """ Gets all the terminal descendants of this node
