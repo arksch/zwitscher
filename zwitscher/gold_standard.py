@@ -3,6 +3,8 @@
 """
 This module has helper functions to create a gold standard
 """
+import numpy as np
+from zwitscher.utils.PCC import load_connectors
 
 __author__ = 'arkadi'
 
@@ -113,3 +115,82 @@ def label_arg_node(arg_pos, tree, label=0):
     elif label == 1:
         node.arg1 = True
     node.label = label
+
+
+def load_gold_data(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
+                               'potsdam-commentary-corpus-2.0.0/connectors'):
+    # Load PCC data
+    pcc = load_connectors(connector_folder)
+    # creating a pd.DataFrame
+    return pcc_to_gold(pcc)
+
+
+def clean_data(dataframe):
+    """ Transforms all Nones int np.NaN and drops rows where connective_position or sentences is NaN
+
+    :param dataframe: Gold data from the PCC
+    :type dataframe: pd.DataFrame
+    :return: Cleaned data
+    :rtype: pd.DataFrame
+    """
+    dataframe[dataframe.isnull()] = np.NaN
+    dataframe = dataframe.dropna(subset=['connective_positions', 'sentences'])
+    return dataframe
+
+
+def pcc_to_arg_node_gold(same_sent_pcc, syntax_dict):
+    """ Get all the nodes from the pcc dataframe
+
+    :param same_sent_pcc:
+    :type same_sent_pcc: pd.DataFrame
+    :return: Dataframe with nodes as index and arg0, arg1, connective_positions,
+    sentence and syntax as columns
+    Also a node dict, since objects in pd.DataFrames seem to break
+    :rtype: pair
+    """
+    data = {}
+    node_dict = dict()
+    for i in range(0, len(same_sent_pcc)):
+        sent_data = {}
+        conn_series = same_sent_pcc.iloc[i, :]
+        conn_nested_pos = conn_series['connective_positions']
+        sents = [sent for (sent, tok) in conn_nested_pos]
+        if len(set(sents)) != 1:
+            print 'Found %i sentences in %s' % (len(sents), str(conn_series))
+        sent = sents[0]
+        sentence = conn_series['sentences'][sent]
+        syntax_id = conn_series['syntax_ids'][sent]
+        syntax_tree = syntax_dict[syntax_id]
+        insent_arg0 = [tok for (sent, tok) in conn_series['arg0']]
+        insent_arg1 = [tok for (sent, tok) in conn_series['arg1']]
+        label_arg_node(insent_arg0, syntax_tree, label=0)
+        label_arg_node(insent_arg1, syntax_tree, label=1)
+        connective_pos = [tok for sent, tok in conn_series['connective_positions']]
+        sent_data = {'sentence': sentence,
+                     'arg0': insent_arg0,
+                     'arg1': insent_arg1,
+                     'connective_positions': connective_pos,
+                     'syntax_id': syntax_id}
+        for node in [node for node in syntax_tree.nodes if not node.terminal]:
+        #for node in set(list(syntax_tree.iter_nodes(include_terminals=False))):
+            # Don't have node as a index, since it is easier to access with int
+            node_data = {}
+            node_id = node.id_str
+            node_dict[node_id] = node
+            node_data.update(sent_data)
+            node_data['node_id'] = node_id
+            node_data['is_arg0_node'] = node.arg0
+            node_data['is_arg1_node'] = node.arg1
+            data[node_id] = node_data
+    return pd.DataFrame().from_dict(data, orient='index'), node_dict
+
+
+def same_sentence(clean_pcc):
+    """ Filter out those connectives that have the argument in the same sentence
+
+    :param clean_pcc:
+    :type clean_pcc: pd.DataFrame
+    :return:
+    :rtype: pd.DataFrame
+    """
+    return clean_pcc[clean_pcc['sentence_dist'] == 0]

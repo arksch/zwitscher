@@ -8,7 +8,8 @@ import uuid
 import pickle
 
 from gold_standard import pcc_to_gold
-from learn import load_gold_data, clean_data, learn_sentdist
+from learn import learn_sentdist
+from zwitscher.gold_standard import load_gold_data, clean_data
 
 __author__ = 'arkadi'
 

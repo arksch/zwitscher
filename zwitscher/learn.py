@@ -5,41 +5,19 @@ Methods needed for learning classifiers
 """
 import numpy as np
 import pandas as pd
-
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.cross_validation import cross_val_score
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 
-from utils.PCC import load_connectors
-from utils.tree import ConstituencyTree
-from gold_standard import pcc_to_gold, label_arg_node
 from features import discourse_connective_text_featurizer, node_featurizer
+from predict_argspan import predict_arg_node
+
 
 __author__ = 'arkadi'
 
 
-def load_gold_data(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
-                               'potsdam-commentary-corpus-2.0.0/connectors'):
-    # Load PCC data
-    pcc = load_connectors(connector_folder)
-    # creating a pd.DataFrame
-    return pcc_to_gold(pcc)
-
-
-def clean_data(dataframe):
-    """ Transforms all Nones int np.NaN and drops rows where connective_position or sentences is NaN
-
-    :param dataframe: Gold data from the PCC
-    :type dataframe: pd.DataFrame
-    :return: Cleaned data
-    :rtype: pd.DataFrame
-    """
-    dataframe[dataframe.isnull()] = np.NaN
-    dataframe = dataframe.dropna(subset=['connective_positions', 'sentences'])
-    return dataframe
-
-
-def featurize_sentdist_data(dataframe, feature_function):
+def sentdist_feature_dataframe(dataframe, feature_function):
     """ Creates features as specified by the featurizer that creates a feature dict from
     sentences and connective positions
 
@@ -55,7 +33,12 @@ def featurize_sentdist_data(dataframe, feature_function):
     return features
 
 
-def featurize_node_data(dataframe, feature_function):
+def node_feature_dataframe(dataframe,
+                        feature_function,
+                        syntax_dict=None,
+                        node_dict=None,
+                        feature_list=None
+                        ):
     """ Creates features as specified by the featurizer that creates a feature dict from
     sentences and connective positions
 
@@ -63,24 +46,71 @@ def featurize_node_data(dataframe, feature_function):
     Connective positions is a list with pairs of sentence and token indices
     :param dataframe: data with columns 'sentences' and 'connective_positions'
     :type dataframe: pd.DataFrame
+    :param syntax_dict:
+    :type syntax_dict: dict
+    :param node_dict:
+    :type node_dict: dict
     :return: features
     :rtype: pd.DataFrame
     """
+    if syntax_dict is None or node_dict is None:
+        raise ValueError('Need syntax and node dict to look up values')
+    # Defining a helper method
     def row_reduce(row):
-        ser = pd.Series(feature_function(row['node_id'],
-                                         row['sentence'],
+        ser = pd.Series(feature_function(node_dict[row['node_id']],
                                          row['connective_positions'],
-                                         row['syntax_id']))
+                                         syntax_dict[row['syntax_id']],
+                                         feature_list=feature_list))
         return ser
+    # Applying the helper to every row in the dataframe
     features = dataframe.apply(lambda row: row_reduce(row), axis=1, reduce=False)
     return features
 
 
+def encode_label_features(features, le, label_features):
+    """ Helper to encode non numerical labels
+
+    :param features: Features data
+    :type features: pd.DataFrame
+    :param le: encoder
+    :type le: LabelEncoder
+    :param label_features: Names of features that are labels
+    :type label_features: list
+    :return: encoded feature data
+    :rtype: pd.DataFrame
+    """
+    print 'Encoding labels...'
+    for feat in label_features:
+        features[feat] = le.transform(features[feat])
+    print 'Encoded label'
+    return features
+
+
+def binarize_features(encoded_features, ohe, label_features):
+    """ Helper to binarize features
+
+    :param encoded_features: Features data already encoded into floats
+    :type encoded_features: pd.DataFrame
+    :param ohe: encoder
+    :type ohe: OneHotEncoder
+    :param label_features: Names of features that are labels
+    :type label_features: list
+    :return: binarized feature data
+    :rtype: pd.DataFrame
+    """
+    print 'Binarizing features for logistic regression...'
+    binarized_features = ohe.transform(encoded_features[label_features].values)
+    print 'Binarized features.'
+    feature_list = encoded_features.columns
+    cont_features = [feat for feat in feature_list if
+                     feat not in label_features]
+    logit_features = np.concatenate([encoded_features[cont_features].values, binarized_features], axis=1)
+    return logit_features
+
+
 def learn_sentdist(clean_pcc,
-                   feature_list=['connective_lexical', 'length_connective',
-                                 'length_prev_sent', 'length_same_sent', 'length_next_sent',
-                                 'tokens_before', 'tokens_after', 'tokens_between'],
-                   label_features=['connective_lexical']):
+                   feature_list=None,
+                   label_features=None):
     """ Learning a classifier for the distance of arguments from a connective
 
     Runs a random forest. Prints out accuracy scores from a 5-fold cross validation.
@@ -96,18 +126,14 @@ def learn_sentdist(clean_pcc,
     # Taking our favorite featurizer
     featurizer = lambda sents, conn_pos: discourse_connective_text_featurizer(sents, conn_pos,
                                                                               feature_list=feature_list)
-    features = featurize_sentdist_data(clean_pcc, featurizer)  # Got features of X
+    features = sentdist_feature_dataframe(clean_pcc, featurizer)  # Got features of X
     print 'Calculated all features'
 
     # We need to encode the non-numerical labels
     le = LabelEncoder()
-    if label_features:
-        print 'Encoding labels...'
-        # LabelEncoder only deals with 1 dim np.arrays
-        le.fit(features[label_features].values.ravel())
-        for feat in label_features:
-            features[feat] = le.transform(features[feat])
-        print 'Encoded label'
+    # LabelEncoder only deals with 1 dim np.arrays
+    le.fit(features[label_features].values.ravel())
+    features = encode_label_features(features, le, label_features)
 
     print 'Cross validating classifier...'
     clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1, verbose=1)
@@ -121,84 +147,12 @@ def learn_sentdist(clean_pcc,
     return clf, scores, le
 
 
-def same_sentence(clean_pcc):
-    """ Filter out those connectives that have the argument in the same sentence
-
-    :param clean_pcc:
-    :type clean_pcc: pd.DataFrame
-    :return:
-    :rtype: pd.DataFrame
-    """
-    return clean_pcc[clean_pcc['sentence_dist'] == 0]
-
-
-def pcc_to_arg_node_gold(same_sent_pcc, syntax_dict):
-    """ Get all the nodes from the pcc dataframe
-
-    :param same_sent_pcc:
-    :type same_sent_pcc: pd.DataFrame
-    :return: Dataframe with nodes as index and arg0, arg1, connective_positions,
-    sentence and syntax as columns
-    Also a node dict, since objects in pd.DataFrames seem to break
-    :rtype: pair
-    """
-    data = {}
-    index = 0
-    node_dict = dict()
-    for i in range(0, len(same_sent_pcc)):
-        sent_data = {}
-        conn_series = same_sent_pcc.iloc[i, :]
-        conn_nested_pos = conn_series['connective_positions']
-        sents = [sent for (sent, tok) in conn_nested_pos]
-        if len(set(sents)) != 1:
-            print 'Found %i sentences in %s' % (len(sents), str(conn_series))
-        sent = sents[0]
-        sentence = conn_series['sentences'][sent]
-        syntax_id = conn_series['syntax_ids'][sent]
-        syntax_tree = syntax_dict[syntax_id]
-        insent_arg0 = [tok for (sent, tok) in conn_series['arg0']]
-        insent_arg1 = [tok for (sent, tok) in conn_series['arg1']]
-        if not isinstance(syntax_tree, ConstituencyTree):
-            # Fixme: Apparantely there is some bug that makes a tree a string
-            print 'Found string %s instead of syntax tree' % str(syntax_tree)
-            continue
-        label_arg_node(insent_arg0, syntax_tree, label=0)
-        label_arg_node(insent_arg1, syntax_tree, label=1)
-        connective_pos = [tok for sent, tok in conn_series['connective_positions']]
-        syntax_dict[syntax_id] = syntax_id
-        sent_data = {'sentence': sentence,
-                     'arg0': insent_arg0,
-                     'arg1': insent_arg1,
-                     'connective_positions': connective_pos,
-                     'syntax_id': syntax_id}
-        for node in [node for node in syntax_tree.nodes if not node.terminal]:
-        #for node in set(list(syntax_tree.iter_nodes(include_terminals=False))):
-            # Don't have node as a index, since it is easier to access with int
-            node_data = {}
-            node_id = node.id_str
-            node_dict[node_id] = node
-            node_data.update(sent_data)
-            node_data['node_id'] = node_id
-            node_data['is_arg0_node'] = node.arg0
-            node_data['is_arg1_node'] = node.arg1
-            data[node_id] = node_data
-            index += 1
-    return pd.DataFrame().from_dict(data, orient='index'), node_dict
-
-
 def learn_main_arg_node(node_df,
                         syntax_dict,
                         node_dict,
-                          feature_list=['connective_lexical',
-                                        'nr_of_siblings',
-                                        #'nr_of_left_C_siblings',
-                                        #'nr_of_right_C_siblings',
-                                        'node_cat',
-                                        'path_to_node',
-                                        #'relative_pos_of_N_to_C'
-                                        ],
-                          internal_argument=True,
-                          label_features=['connective_lexical', 'path_to_node', 'relative_pos_of_N_to_C']):
+                        precalc_features=None,
+                          feature_list=None,
+                          label_features=None):
     """ Learn a classifier for a node being arg0 or arg1
 
     :param node_df: node data with tree and node ids
@@ -216,22 +170,87 @@ def learn_main_arg_node(node_df,
     :return:
     :rtype:
     """
-    def featurizer(node, sent, connective_pos, tree):
-        return node_featurizer(node, sent, connective_pos, tree,
-                               syntax_dict=syntax_dict,
-                               node_dict=node_dict,
-                               feature_list=feature_list)
+    featurizer = lambda df: node_feature_dataframe(df, node_featurizer,
+                                                   syntax_dict=syntax_dict,
+                                                   node_dict=node_dict,
+                                                   feature_list=feature_list)
 
-    print 'Calculating features'
-    import ipdb; ipdb.set_trace()
-    features = featurize_node_data(node_df, featurizer)  # Got features of X
-    print 'done'
-    # ToDo: Design features (see Lin et al p. 17, Connective_syntactic!)
-    # ToDo: Chose the correct nodes (by some heuristic: first chose the node that maximizes the overlap between prediction and true)
-    # ToDo: Train a logistic regression classifier on all the nodes of the given sentences
+    if precalc_features is None:
+        print 'Calculating features'
+        features = featurizer(node_df)
+        print 'done'
+    else:
+        features = precalc_features
 
+    # We need to encode the non-numerical labels
+    le = LabelEncoder()
+    # LabelEncoder only deals with 1 dim np.arrays
+    le.fit(features[label_features].values.ravel())
+    encoded_features = encode_label_features(features, le, label_features)
+    # We need to binarize the data for logistic regression
+    ohe = OneHotEncoder(sparse=False)
+    ohe.fit(encoded_features[label_features].values)
+    logit_features = binarize_features(encoded_features, ohe, label_features)
+
+    print 'Training classifiers for arg0 labeling'
+    print '======================================'
+    nr_of_nodes = float(len(node_df))
+    baseline = (nr_of_nodes - sum(node_df['is_arg0_node'])) / nr_of_nodes
+    print 'Majority baseline: %f' % baseline
+    print 'Cross validating Logistic regression classifier...'
+    # C is the inverse of the regularization strength
     # http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html
-    # ToDo: Implement method to find nodes with maximal probability
+    logit_arg0_clf = LogisticRegression(C=1.0)
+    scores = cross_val_score(logit_arg0_clf, logit_features,
+                             node_df['is_arg0_node'], cv=5)
+    print 'Cross validated Logistic Regression classifier\nscores: %s\nmean score: ' \
+          '%f' % (str(scores), scores.mean())
+
+    print 'Cross validating Random Forest classifier...'
+    rand_forest_arg0_clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1,
+                                                  verbose=0)
+    scores = cross_val_score(rand_forest_arg0_clf, encoded_features,
+                             node_df['is_arg0_node'], cv=5)
+    print 'Cross validated RandomForest classifier\nscores: %s\nmean score: %f' % (
+        str(scores), scores.mean())
+
+    print ''
+    print 'Training classifiers for arg1 labeling'
+    print '======================================'
+    baseline = (nr_of_nodes - sum(node_df['is_arg1_node'])) / nr_of_nodes
+    print 'Majority baseline: %f' % baseline
+    print 'Cross validating Logistic regression classifier...'
+    # C is the inverse of the regularization strength
+    logit_arg1_clf = LogisticRegression(C=1.0)
+    scores = cross_val_score(logit_arg1_clf, logit_features,
+                             node_df['is_arg1_node'], cv=5)
+    print 'Cross validated Logistic Regression classifier\nscores: %s\nmean score: ' \
+          '%f' % (
+              str(scores), scores.mean())
+
+    print 'Cross validating Random Forest classifier...'
+    rand_forest_arg1_clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1, verbose=0)
+    scores = cross_val_score(rand_forest_arg1_clf, encoded_features, node_df['is_arg1_node'], cv=5)
+    print 'Cross validated RandomForest classifier\nscores: %s\nmean score: %f' % (
+        str(scores), scores.mean())
+
+    print 'Learning classifiers on the whole data set...'
+    logit_arg0_clf.fit(logit_features, node_df['is_arg0_node'])
+    logit_arg1_clf.fit(logit_features, node_df['is_arg1_node'])
+    rand_forest_arg0_clf.fit(encoded_features, node_df['is_arg0_node'])
+    rand_forest_arg1_clf.fit(encoded_features, node_df['is_arg1_node'])
+    print 'Learned classifier on the whole data set'
+
+    tree = syntax_dict['s1003']
+    conn_pos = [7]
+
+    most_probable_node = predict_arg_node(conn_pos, tree, logit_arg0_clf, featurizer, label_features=label_features, label_encoder=le, binary_encoder=ohe, argument=0)
+    # ToDo: Evaluate this on some evaluation data set (and on itself)
+
+    import ipdb; ipdb.set_trace()
+    # ToDo: Design features (see Lin et al p. 17, Connective_syntactic!)
+
+
 
     # ToDo: Evaluate this method (remember not to count punctuation)
     # ToDo: Get baseline by labeling everything after the connective as
@@ -239,13 +258,12 @@ def learn_main_arg_node(node_df,
     # ToDo: Get baseline for previous sentence by labeling the full sentence
     #  as arg1.
 
-    # ToDo: Try to use a random forest classifier as well
+    return_dict = {'logit_arg0': logit_arg0_clf,
+                   'logit_arg1': logit_arg1_clf,
+                   'rand_forest_arg0': rand_forest_arg0_clf,
+                   'rand_forest_arg1': rand_forest_arg1_clf,
+                   'label_encoder': le,
+                   'one_hot_encoder': ohe,
+                   'node_featurizer': featurizer}
+    return return_dict
 
-    # ToDo: Implement tree subtraction (for this need to refine the finding of the correct nodes)
-    # ToDo: Or find another method that trains with a scoring method. Write evaluation method on node base (given the optimal other argument, if we wrap over it its fine, else penalize)
-
-
-    return clf, scores, le
-
-if __name__ == '__main__':
-    learn_main_arg_node()

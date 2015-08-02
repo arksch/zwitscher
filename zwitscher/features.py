@@ -78,14 +78,29 @@ def discourse_connective_text_featurizer(sents, nested_connective_positions,
     return results
 
 
-def node_featurizer(node, sent, connective_pos, tree,
-                    feature_list=['connective_lexical', 'nr_of_C_siblings', 'nr_of_left_C_siblings', 'nr_of_right_C_siblings',
+def node_featurizer(node,
+                    connective_pos,
+                    tree,
+                    feature_list=['connective_lexical', 'nr_of_C_siblings',
+                                  'nr_of_left_C_siblings', 'nr_of_right_C_siblings',
                               'node_cat', 'path_to_node', 'relative_pos_of_N_to_C'],
-                    syntax_dict=None,
-                    node_dict=None,
                     dimlex_path=os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')):
-    if syntax_dict is None or node_dict is None:
-        raise ValueError('Need syntax and node dict to look up values')
+    """ Calculating features for finding the argument nodes
+
+    :param node:
+    :type node: zwitscher.utils.tree.Node
+    :param connective_pos:
+    :type connective_pos: list
+    :param tree:
+    :type tree: zwitscher.utils.tree.ConstituencyTree
+    :param feature_list:
+    :type feature_list: list
+    :param dimlex_path:
+    :type dimlex_path: basestring
+    :return:
+    :rtype: dict
+    """
+
     results = dict()
     for feature in feature_list:
         if isinstance(feature, basestring):
@@ -94,30 +109,26 @@ def node_featurizer(node, sent, connective_pos, tree,
                 assert dimlex_path, 'Need to specify location of dimlex'
                 dimlex = load_dimlex(dimlex_path)
                 # create a function that transforms a text and connective_pos into the lexicon entry
-                feature_fct = lambda n, s, c, t: connective_lexical(connective_raw_flat(s, c), lexicon=dimlex)  # Fixme: slow!
+                feature_fct = lambda n, c, t: connective_lexical(connective_raw_flat(t, c), lexicon=dimlex)  # Fixme: slow!
             elif feature == 'nr_of_siblings':
-                feature_fct = lambda n, s, c, t: siblings(syntax_dict[t].terminals[c[0]],
-                                                          own_pos=c[0],
-                                                          direction='any')
+                feature_fct = lambda n, c, t: siblings(tree.terminals[c[0]], own_pos=c[0], direction='any')
             elif feature == 'nr_of_left_C_siblings':
-                feature_fct = lambda n, s, c, t: siblings(syntax_dict[t].terminals[c[0]], own_pos=c[0], direction='left')  # Fixme: slow! use the full c
+                feature_fct = lambda n, c, t: siblings(tree.terminals[c[0]], own_pos=c[0], direction='left')  # Fixme: slow! use the full c
             elif feature == 'nr_of_right_C_siblings':
-                feature_fct = lambda n, s, c, t: siblings(syntax_dict[t].terminals[c[0]], own_pos=c[0], direction='right')  # Fixme: slow! use the full c
+                feature_fct = lambda n, c, t: siblings(tree.terminals[c[0]], own_pos=c[0], direction='right')  # Fixme: slow! use the full c
             elif feature == 'node_cat':
-                feature_fct = lambda n, s, c, t: node_dict[n].cat
+                feature_fct = lambda n, c, t: node.cat
             elif feature == 'path_to_node':
-                feature_fct = lambda n, s, c, t: (syntax_dict[t]
-                                                  .terminals[c[0]]
-                                                  .path_to_other(node_dict[n]))  # Fixme: fast but seems to have odd results, use the full c
+                feature_fct = lambda n, c, t: path_to_node(node, c, tree,
+                                                           last_node=True)
             elif feature == 'relative_pos_of_N_to_C':
-                feature_fct = lambda n, s, c, t: relative_pos(node_dict[n], syntax_dict[t].terminals[c[0]])  # Fixme: ives always NaN, use the full c
+                feature_fct = lambda n, c, t: relative_pos(node, tree.terminals[c[0]])  # Fixme: ives always NaN, use the full c
             else:
                 raise ValueError('%s is an unknown feature' % feature)
         else:
             feature_fct = feature
             feature_name = feature.__name__
-        results[feature_name] = feature_fct(node, sent, connective_pos, tree)
-    sys.stdout.write('.')
+        results[feature_name] = feature_fct(node, connective_pos, tree)
     return results
 
 #########################################
@@ -168,7 +179,7 @@ def connective_raw(sents, nested_connective_positions):
     return '_'.join([' '.join([sents[sent][tok] for (sent, tok) in chunk]) for chunk in chunks])
 
 
-def connective_raw_flat(sent, indices):
+def connective_raw_flat(tree, indices):
     """ Helper to get the raw connective from within a sentence
 
     :param sent:
@@ -178,6 +189,7 @@ def connective_raw_flat(sent, indices):
     :return: concatenate the strings. Discontinuous jumps are concatenated with a '_'
     :rtype: basestring
     """
+    sent = [term.word for term in tree.terminals]
     sents = [sent]
     nested_indices = [(0, i) for i in indices]
     return  connective_raw(sents, nested_indices)
@@ -374,3 +386,15 @@ def relative_pos(node, connective_positions):
         return 'right'
     else:
         return 'left'
+
+
+def path_to_node(node, c, tree, last_node=True):
+    terminal = tree.terminals[c[0]]
+    path = terminal.path_to_other(node)
+    if last_node:
+        if len(path) > 0:
+            return path[-1]
+        else:
+            return 'terminal'
+    else:
+        return '_'.join(path)

@@ -185,12 +185,16 @@ class Node():
         :rtype: list
         """
         terminals = []
-        children = self.children
-        for child in children:
+        # The two following lines are not the same as
+        # descendants = self.children
+        # which would extend also to self.children!
+        descendants = []
+        descendants.extend(self.children)
+        for child in descendants:
             if child.terminal:
                 terminals.append(child)
             else:
-                children.extend(child.children)
+                descendants.extend(child.children)
         return terminals
 
     def terminal_indices(self):

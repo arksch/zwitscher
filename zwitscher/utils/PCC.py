@@ -181,8 +181,8 @@ class Parser(object):
         discourse.rawtext = ' '.join(tokens)
         discourse.connectives = connectives.values()
         if syntax_xml is not None:
-            tiger_syntax_dict = parse_syntax(syntax_xml)
-            discourse.load_tiger_syntax(tiger_syntax_dict)
+            tiger_syntax = parse_syntax(syntax_xml)
+            discourse.load_tiger_syntax(tiger_syntax)
         else:
             # No good way to find sentence boundaries, so we just take [.?!]
             discourse.set_sentences()
@@ -195,7 +195,8 @@ def parse_syntax(xml_text):
     annotations = []  # A list with a Constituency Tree for each sentence
     # Get the constituency trees
     for sent_xml in sentences_xml:
-        annotations.append(ConstituencyTree(str(sent_xml)))
+        tree = ConstituencyTree(str(sent_xml))
+        annotations.append(tree)
     # Sort the output just in case
     # annotations = sorted(annotations, key=lambda tree: int(tree.id_str[1:]))  # ids are of the form s1234
     return annotations

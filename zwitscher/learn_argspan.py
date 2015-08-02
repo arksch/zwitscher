@@ -8,9 +8,12 @@ import os
 import uuid
 import pickle
 
+import pandas as pd
+
 from gold_standard import pcc_to_gold
-from learn import load_gold_data, clean_data, same_sentence, \
-    pcc_to_arg_node_gold, learn_main_arg_node
+from learn import learn_main_arg_node
+from zwitscher.gold_standard import load_gold_data, clean_data, \
+    pcc_to_arg_node_gold, same_sentence
 
 __author__ = 'arkadi'
 
@@ -23,10 +26,11 @@ def main(feature_list=['connective_lexical',
                      'node_cat',
                      #'relative_pos_of_N_to_C'
                      ],
-         label_features=['connective_lexical'],
+         label_features=['connective_lexical', 'node_cat', 'path_to_node'],
          connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
                           'potsdam-commentary-corpus-2.0.0/connectors',
          pickle_folder='data',
+         unpickle_features=True,
          unpickle_gold=True,
          pickle_classifier=True
          ):
@@ -45,7 +49,7 @@ def main(feature_list=['connective_lexical',
     :rtype: (sklearn.ensemble.forest.RandomForestClassifier, sklearn.preprocessing.LabelEncoder)
     """
     # Some checks on the function call
-    if pickle_classifier or unpickle_gold:
+    if pickle_classifier or unpickle_gold or unpickle_features:
         assert os.path.exists(pickle_folder), 'Pickle folder has to exist when using pickling'
     if not unpickle_gold:
         assert os.path.exists(connector_folder), 'Connector folder has to exist, when not unpickling connectors'
@@ -70,19 +74,27 @@ def main(feature_list=['connective_lexical',
 
     same_sentence_connectives = same_sentence(clean_pcc)
     node_gold_df, node_dict = pcc_to_arg_node_gold(same_sentence_connectives, syntax_dict)
-    print '%i incorrectly parsed trees' % len([tree for tree in syntax_dict.values() if isinstance(tree, basestring)])
-    print '%i incorrectly parsed nodes' % len(
-        [node for node in node_dict.values() if
-         isinstance(node, basestring)])
-    print node_gold_df.head()
-    import ipdb; ipdb.set_trace()
+    print ('%i incorrectly parsed trees' %
+           len([tree for tree in syntax_dict.values()
+                if isinstance(tree, basestring)]))
+    print ('%i incorrectly parsed nodes' %
+           len([node for node in node_dict.values()
+                if isinstance(node, basestring)]))
+
     print 'Cleaned data'
 
+    features = None
+    if unpickle_features:
+        hdf_path = os.path.join(pickle_folder, 'features.h5')
+        features = pd.read_hdf(hdf_path, 'argspan')
+        node_gold_df = pd.read_hdf(hdf_path, 'gold_node')
 
-    clf, scores, le = learn_main_arg_node(node_gold_df, syntax_dict, node_dict,
+
+    return_dict = learn_main_arg_node(node_gold_df, syntax_dict, node_dict,
+                                          precalc_features=features,
                                           feature_list=feature_list,
                                           label_features=label_features)
 
 
 if __name__ == '__main__':
-    main(unpickle_gold=False)
+    main(unpickle_gold=True, unpickle_features=False)
