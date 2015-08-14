@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-This module deals with German connectives
+This module hold helper classes to deal with discourses, connectives and lexica
 """
 import re
 

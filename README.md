@@ -68,11 +68,21 @@ Options:
   --help                          Show this message and exit.
   ```
 
+## Performance
 
+The sentence distance classification reaches an accuracy of over 90%, which
+is a reasonable result over the baseline of 57% majority labeling with both
+arguments in the same sentence.
+
+On the contrary, the argument span labeling only reaches an f-score of 23% for
+the internal argument span and 25% for the external argument span.
+Both values were calculated by counting words that were labeled as in the
+ground truth as a true positive, and other labeled words as false
+positive/negative respectively.
 
 ## Development
 
-This package is still far from perfect. Feel free to contribute!
+Obviously, this package is still far from perfect. Feel free to contribute!
 
 ### Tests
 
@@ -87,7 +97,7 @@ You can run tests with
 - Better features (features.py)
   - Syntactic features for sentence distance
   - Not only use the first connective word for argument span features
-  - Us
+  - Faster feature calculation
 - Better evaluation
   - Nested cross-validation, as the current evaluation is biased by selection of
 the best classifier
@@ -101,6 +111,7 @@ labeling separately
 (Lin et al use tree subtraction, but that might not be a good choice for PCC)
 - Try other classification algorithms
 - Create command line arguments for the classifier training scripts
+- Improve the parsing or fix inconsistencies in the PCC
 - Fix one of the many ToDos in the code and refactor it to be readable
 
 
