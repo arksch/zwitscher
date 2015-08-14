@@ -11,7 +11,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
 from features import discourse_connective_text_featurizer, node_featurizer
-from predict_argspan import predict_arg_node
+
 
 
 __author__ = 'arkadi'
@@ -70,6 +70,9 @@ def node_feature_dataframe(dataframe,
 def encode_label_features(features, le, label_features):
     """ Helper to encode non numerical labels
 
+    Maps previously unseen labels to '<unknown>', note that after fitting you
+    have to call
+    le.classes_ = np.append(le.classes_, '<unknown>')
     :param features: Features data
     :type features: pd.DataFrame
     :param le: encoder
@@ -78,11 +81,16 @@ def encode_label_features(features, le, label_features):
     :type label_features: list
     :return: encoded feature data
     :rtype: pd.DataFrame
+
+    :Example:
+    le = LabelEncoder()
+    le.fit(features[label_features].values.ravel())
+    le.classes_ = np.append(le.classes_, '<unknown>')
+    encoded_features = encode_label_features(features, le, label_features)
     """
-    print 'Encoding labels...'
     for feat in label_features:
+        features[feat] = features[feat].map(lambda s: '<unknown>' if s not in le.classes_ else s)
         features[feat] = le.transform(features[feat])
-    print 'Encoded label'
     return features
 
 
@@ -98,9 +106,7 @@ def binarize_features(encoded_features, ohe, label_features):
     :return: binarized feature data
     :rtype: pd.DataFrame
     """
-    print 'Binarizing features for logistic regression...'
     binarized_features = ohe.transform(encoded_features[label_features].values)
-    print 'Binarized features.'
     feature_list = encoded_features.columns
     cont_features = [feat for feat in feature_list if
                      feat not in label_features]
@@ -133,10 +139,12 @@ def learn_sentdist(clean_pcc,
     le = LabelEncoder()
     # LabelEncoder only deals with 1 dim np.arrays
     le.fit(features[label_features].values.ravel())
+    # Dealing with unknowns
+    le.classes_ = np.append(le.classes_, '<unknown>')
     features = encode_label_features(features, le, label_features)
 
     print 'Cross validating classifier...'
-    clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1, verbose=1)
+    clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1, verbose=0)
     scores = cross_val_score(clf, features, clean_pcc['sentence_dist'], cv=5)
     print 'Cross validated classifier\nscores: %s\nmean score: %f' % (str(scores), scores.mean())
 
@@ -170,27 +178,35 @@ def learn_main_arg_node(node_df,
     :return:
     :rtype:
     """
-    featurizer = lambda df: node_feature_dataframe(df, node_featurizer,
-                                                   syntax_dict=syntax_dict,
-                                                   node_dict=node_dict,
-                                                   feature_list=feature_list)
+
+    def featurizer(node_df, syntax_dict, node_dict):
+        return node_feature_dataframe(node_df, node_featurizer,
+                                      syntax_dict=syntax_dict,
+                                      node_dict=node_dict,
+                                      feature_list=feature_list)
 
     if precalc_features is None:
         print 'Calculating features'
-        features = featurizer(node_df)
+        features = featurizer(node_df, syntax_dict, node_dict)
         print 'done'
     else:
         features = precalc_features
 
     # We need to encode the non-numerical labels
+    print 'Encoding labels...'
     le = LabelEncoder()
     # LabelEncoder only deals with 1 dim np.arrays
     le.fit(features[label_features].values.ravel())
+    # Dealing with unknowns
+    le.classes_ = np.append(le.classes_, '<unknown>')
     encoded_features = encode_label_features(features, le, label_features)
+    print 'Encoded label'
     # We need to binarize the data for logistic regression
+    print 'Binarizing features for logistic regression...'
     ohe = OneHotEncoder(sparse=False)
     ohe.fit(encoded_features[label_features].values)
     logit_features = binarize_features(encoded_features, ohe, label_features)
+    print 'Binarized features.'
 
     print 'Training classifiers for arg0 labeling'
     print '======================================'
@@ -206,13 +222,13 @@ def learn_main_arg_node(node_df,
     print 'Cross validated Logistic Regression classifier\nscores: %s\nmean score: ' \
           '%f' % (str(scores), scores.mean())
 
-    print 'Cross validating Random Forest classifier...'
-    rand_forest_arg0_clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1,
-                                                  verbose=0)
-    scores = cross_val_score(rand_forest_arg0_clf, encoded_features,
-                             node_df['is_arg0_node'], cv=5)
-    print 'Cross validated RandomForest classifier\nscores: %s\nmean score: %f' % (
-        str(scores), scores.mean())
+    # print 'Cross validating Random Forest classifier...'
+    # rand_forest_arg0_clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1,
+    #                                               verbose=0)
+    # scores = cross_val_score(rand_forest_arg0_clf, encoded_features,
+    #                          node_df['is_arg0_node'], cv=5)
+    # print 'Cross validated RandomForest classifier\nscores: %s\nmean score: %f' % (
+    #     str(scores), scores.mean())
 
     print ''
     print 'Training classifiers for arg1 labeling'
@@ -228,26 +244,30 @@ def learn_main_arg_node(node_df,
           '%f' % (
               str(scores), scores.mean())
 
-    print 'Cross validating Random Forest classifier...'
-    rand_forest_arg1_clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1, verbose=0)
-    scores = cross_val_score(rand_forest_arg1_clf, encoded_features, node_df['is_arg1_node'], cv=5)
-    print 'Cross validated RandomForest classifier\nscores: %s\nmean score: %f' % (
-        str(scores), scores.mean())
+    # print 'Cross validating Random Forest classifier...'
+    # rand_forest_arg1_clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1, verbose=0)
+    # scores = cross_val_score(rand_forest_arg1_clf, encoded_features, node_df['is_arg1_node'], cv=5)
+    # print 'Cross validated RandomForest classifier\nscores: %s\nmean score: %f' % (
+    #     str(scores), scores.mean())
 
     print 'Learning classifiers on the whole data set...'
     logit_arg0_clf.fit(logit_features, node_df['is_arg0_node'])
     logit_arg1_clf.fit(logit_features, node_df['is_arg1_node'])
-    rand_forest_arg0_clf.fit(encoded_features, node_df['is_arg0_node'])
-    rand_forest_arg1_clf.fit(encoded_features, node_df['is_arg1_node'])
+    # rand_forest_arg0_clf.fit(encoded_features, node_df['is_arg0_node'])
+    # rand_forest_arg1_clf.fit(encoded_features, node_df['is_arg1_node'])
     print 'Learned classifier on the whole data set'
 
-    tree = syntax_dict['s1003']
-    conn_pos = [7]
+    # tree = syntax_dict['s1003']
+    # conn_pos = [7]
 
-    most_probable_node = predict_arg_node(conn_pos, tree, logit_arg0_clf, featurizer, label_features=label_features, label_encoder=le, binary_encoder=ohe, argument=0)
+    # most_probable_node = predict_arg_node(conn_pos, tree, logit_arg0_clf, featurizer, label_features=label_features, label_encoder=le, binary_encoder=ohe, argument=0)
+
+    #import ipdb; ipdb.set_trace()
+
+
+    # ToDo: Refactor evaluation method from this, then
     # ToDo: Evaluate this on some evaluation data set (and on itself)
 
-    import ipdb; ipdb.set_trace()
     # ToDo: Design features (see Lin et al p. 17, Connective_syntactic!)
 
 
@@ -258,12 +278,12 @@ def learn_main_arg_node(node_df,
     # ToDo: Get baseline for previous sentence by labeling the full sentence
     #  as arg1.
 
-    return_dict = {'logit_arg0': logit_arg0_clf,
-                   'logit_arg1': logit_arg1_clf,
-                   'rand_forest_arg0': rand_forest_arg0_clf,
-                   'rand_forest_arg1': rand_forest_arg1_clf,
+    return_dict = {'logit_arg0_clf': logit_arg0_clf,
+                   'logit_arg1_clf': logit_arg1_clf,
+                   'feature_list': feature_list,
+                   'label_features': label_features,
                    'label_encoder': le,
-                   'one_hot_encoder': ohe,
+                   'binary_encoder': ohe,
                    'node_featurizer': featurizer}
     return return_dict
 

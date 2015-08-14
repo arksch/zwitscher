@@ -4,11 +4,33 @@
 Some scoring methods for our problem
 http://scikit-learn.org/stable/modules/model_evaluation.html
 """
-from sklearn.metrics import make_scorer
+import random
 
-from predict_argspan import label_argspan, predict_arg_node
+import numpy as np
+
+from sklearn.metrics import make_scorer
+from predict import predict_arg_node, label_argspan
+from features import node_featurizer as node_feat
+from learn import node_feature_dataframe
+
 __author__ = 'arkadi'
 
+
+def random_train_test_split(df, eval_frac=0.2):
+    """ Splits a dataframe into train and test
+
+    :param df: dataset
+    :type df: pandas.DataFrame
+    :param eval_size: fraction of the evaluation size
+    :type eval_size: float
+    :return: train and test df
+    :rtype: tuple
+    """
+    eval_size = np.ceil(len(df) * eval_frac)
+    eval_indices = np.random.choice(df.index, eval_size, replace=False)
+    eval_df = df.ix[eval_indices]
+    train_df = df.drop(eval_indices)
+    return train_df, eval_df
 
 
 def overlap_bool(ground_truth, predictions):
@@ -69,7 +91,95 @@ def overlap_f1(ground_truth, predictions):
     return total_f1/float(n)
 
 
-overlap_bool_scorer = make_scorer(overlap_bool, greater_is_better=True)
-overlap_f1_scorer = make_scorer(overlap_f1, greater_is_better=True)
+def evaluate_argspan_prediction(eval_node_df,
+                                syntax_dict,
+                                logit_arg0_clf,
+                                logit_arg1_clf,
+                                feature_list=None,
+                                node_featurizer=None,
+                                label_features=None,
+                                label_encoder=None,
+                                binary_encoder=None):
+    """ Evaluate how well the argument spans were predicted by classifiers
+
+    :param eval_node_df: Node data including columns 'syntax_id',
+    'connective_positions', 'arg0', 'arg1'.
+    :type eval_node_df: pandas.DataFrame
+    :param syntax_dict: To look up the syntactic information
+    :type syntax_dict: dict
+    :param logit_arg0_clf:
+    :type logit_arg0_clf:
+    :param logit_arg1_clf:
+    :type logit_arg1_clf:
+    :param node_featurizer: Create features from the nodes and syntax trees
+    :type node_featurizer:
+    :param label_features:
+    :type label_features:
+    :param label_encoder:
+    :type label_encoder:
+    :param binary_encoder:
+    :type binary_encoder:
+    :return: results with boolean and f1 overlap
+    :rtype: dict
+    """
+
+    if node_featurizer is None:
+        def node_featurizer(node_df, syntax_dict, node_dict):
+            return node_feature_dataframe(node_df, node_feat,
+                                          syntax_dict=syntax_dict,
+                                          node_dict=node_dict,
+                                          feature_list=feature_list)
+    # Evaluation
+
+    eval_results = {'arg0_overlap_bool': 0.0,
+                    'arg1_overlap_bool': 0.0,
+                    'arg0_overlap_f1': 0.0,
+                    'arg1_overlap_f1': 0.0}
+    gt_arg0spans = []
+    predicted_arg0spans = []
+    gt_arg1spans = []
+    predicted_arg1spans = []
+    evaluated_connectives = list()  # tuples (syntax_id, conn_pos)
+    for i in range(len(eval_node_df)):
+        syntax_id = eval_node_df.ix[i, 'syntax_id']
+        conn_pos = eval_node_df.ix[i, 'connective_positions']
+        conn_id = (syntax_id, conn_pos)
+        if conn_id not in evaluated_connectives:
+            tree = syntax_dict[syntax_id]
+            gt_arg0spans.append(eval_node_df.ix[i, 'arg0'])
+            gt_arg1spans.append(eval_node_df.ix[i, 'arg1'])
+            arg0_node = predict_arg_node(conn_pos=conn_pos, tree=tree,
+                                         clf=logit_arg0_clf,
+                                         featurizer=node_featurizer,
+                                         label_features=label_features,
+                                         label_encoder=label_encoder,
+                                         binary_encoder=binary_encoder,
+                                         argument=0)
+            arg1_node = predict_arg_node(conn_pos=conn_pos, tree=tree,
+                                         clf=logit_arg1_clf,
+                                         featurizer=node_featurizer,
+                                         label_features=label_features,
+                                         label_encoder=label_encoder,
+                                         binary_encoder=binary_encoder,
+                                         argument=1)
+            predicted_arg0, predicted_arg1 = label_argspan(arg0_node,
+                                                           arg1_node)
+            predicted_arg0spans.append(predicted_arg0)
+            predicted_arg1spans.append(predicted_arg1)
+            evaluated_connectives.append(conn_id)
+
+    eval_results['arg0_overlap_bool'] = overlap_bool(gt_arg0spans,
+                                                     predicted_arg0spans)
+    eval_results['arg1_overlap_bool'] = overlap_bool(gt_arg1spans,
+                                                     predicted_arg1spans)
+    eval_results['arg0_overlap_f1'] = overlap_f1(gt_arg0spans,
+                                                 predicted_arg0spans)
+    eval_results['arg1_overlap_f1'] = overlap_f1(gt_arg1spans,
+                                                 predicted_arg1spans)
+    return eval_results
+
+
+# overlap_bool_scorer = make_scorer(overlap_bool, greater_is_better=True)
+# overlap_f1_scorer = make_scorer(overlap_f1, greater_is_better=True)
 
 

@@ -13,3 +13,6 @@ eb5a46de34264eab8256ec1e093fecb7	0.882085	['connective_lexical', 'length_prev_se
 38abac6fa2b54789b0436717d7c1338f	0.902031	['connective_lexical', 'length_prev_sent', 'length_connective', 'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token', 'next_token']
 1a7b6a24546a4306a7f17142876ce11d	0.903793	['connective_lexical', 'length_prev_sent', 'length_connective', 'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token', 'next_token', '2prev_token']
 32912095c99e4829914647d887e3580a	0.907458	['connective_lexical', 'length_prev_sent', 'length_connective', 'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token', 'next_token', '2prev_token']
+arg_span	ed0f4620cd1c4402bfa582182be83b44	arg0-bool: 0.243478, arg1-bool: 0.295652, arg0-f1: 0.236867, arg1-f1: 0.274589	['connective_lexical', 'nr_of_siblings', 'path_to_node', 'node_cat']
+sent_dist	d7eaf2f0713f41b3b1d9ed1ad3acd194	0.910183	['connective_lexical', 'length_prev_sent', 'length_connective', 'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token', 'next_token', '2prev_token']
+arg_span	b7a2a707c4df4174a20dd20292f2c24a	arg0-bool: 0.256637, arg1-bool: 0.283186, arg0-f1: 0.227327, arg1-f1: 0.217587	['connective_lexical', 'nr_of_siblings', 'path_to_node', 'node_cat']

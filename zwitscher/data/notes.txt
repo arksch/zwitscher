@@ -105,5 +105,23 @@ Out[67]:
 
 
 
+Paper (along the pipeline):
+Outline of the problem:
+- have syntax trees and connective words, want argument spans
+
+- how is argument node gold data created
 
 
+Possible improvements:
+- use other features
+- deal with discontinuous connectives
+- use correct evaluation method instead of accuracy for the argument node classifier
+
+ipdb> eval_results in sample
+{'arg1_overlap_f1': 0.2464015607473205, 'arg0_overlap_bool': 0.2309278350515464, 'arg0_overlap_f1': 0.21884871884253543, 'arg1_overlap_bool': 0.2639175257731959}
+
+Out of sample 20% of 534:
+Scores: arg0-bool: 0.162162, arg1-bool: 0.288288, arg0-f1: 0.150215, arg1-f1: 0.269635
+2nd scores: arg0-bool: 0.243478, arg1-bool: 0.295652, arg0-f1: 0.236867, arg1-f1: 0.274589
+3rd scores: arg0-bool: 0.256637, arg1-bool: 0.283186, arg0-f1: 0.227327, arg1-f1: 0.217587
+4th scores: arg0-bool: 0.226087, arg1-bool: 0.269565, arg0-f1: 0.222837, arg1-f1: 0.260387

@@ -12,20 +12,17 @@ import pandas as pd
 
 from gold_standard import pcc_to_gold
 from learn import learn_main_arg_node
-from zwitscher.gold_standard import load_gold_data, clean_data, \
+from gold_standard import load_gold_data, clean_data, \
     pcc_to_arg_node_gold, same_sentence
+from evaluation import evaluate_argspan_prediction, random_train_test_split
 
 __author__ = 'arkadi'
 
 # ToDo: Clickify this!
 def main(feature_list=['connective_lexical',
                        'nr_of_siblings',
-                     #'nr_of_left_C_siblings',
-                     #'nr_of_right_C_siblings',
-                     'path_to_node',
-                     'node_cat',
-                     #'relative_pos_of_N_to_C'
-                     ],
+                       'path_to_node',
+                       'node_cat'],
          label_features=['connective_lexical', 'node_cat', 'path_to_node'],
          connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
                           'potsdam-commentary-corpus-2.0.0/connectors',
@@ -72,14 +69,12 @@ def main(feature_list=['connective_lexical',
     print 'Cleaning data...'
     clean_pcc = clean_data(pcc_df)
 
-    same_sentence_connectives = same_sentence(clean_pcc)
-    node_gold_df, node_dict = pcc_to_arg_node_gold(same_sentence_connectives, syntax_dict)
-    print ('%i incorrectly parsed trees' %
-           len([tree for tree in syntax_dict.values()
-                if isinstance(tree, basestring)]))
-    print ('%i incorrectly parsed nodes' %
-           len([node for node in node_dict.values()
-                if isinstance(node, basestring)]))
+    ### Splitting the data connective wise and creating node data after
+    ### the split
+    same_sentence_connectives = same_sentence(clean_pcc)  # a pd.DataFrame)
+    train_df, test_df = random_train_test_split(same_sentence_connectives)
+    train_node_df, train_node_dict = pcc_to_arg_node_gold(train_df, syntax_dict)
+    test_node_df, test_node_dict = pcc_to_arg_node_gold(test_df, syntax_dict)
 
     print 'Cleaned data'
 
@@ -87,13 +82,60 @@ def main(feature_list=['connective_lexical',
     if unpickle_features:
         hdf_path = os.path.join(pickle_folder, 'features.h5')
         features = pd.read_hdf(hdf_path, 'argspan')
-        node_gold_df = pd.read_hdf(hdf_path, 'gold_node')
 
 
-    return_dict = learn_main_arg_node(node_gold_df, syntax_dict, node_dict,
-                                          precalc_features=features,
-                                          feature_list=feature_list,
-                                          label_features=label_features)
+    classification_dict = learn_main_arg_node(train_node_df,
+                                              syntax_dict,
+                                              train_node_dict,
+                                              precalc_features=features,
+                                              feature_list=feature_list,
+                                              label_features=label_features)
+
+    arg0_clf = classification_dict['logit_arg0_clf']
+    arg1_clf = classification_dict['logit_arg1_clf']
+    feature_list = classification_dict['feature_list']
+    label_features = classification_dict['label_features']
+    le = classification_dict['label_encoder']
+    ohe = classification_dict['binary_encoder']
+    node_featurizer = classification_dict['node_featurizer']
+    eval_results = evaluate_argspan_prediction(eval_node_df=test_node_df,
+                                               syntax_dict=syntax_dict,
+                                               logit_arg0_clf=arg0_clf,
+                                               logit_arg1_clf=arg1_clf,
+                                               feature_list=feature_list,
+                                               node_featurizer=node_featurizer,
+                                               label_features=label_features,
+                                               label_encoder=le,
+                                               binary_encoder=ohe)
+    scores = 'arg0-bool: %f, arg1-bool: %f, arg0-f1: %f, arg1-f1: %f' %\
+             (eval_results['arg0_overlap_bool'], eval_results['arg1_overlap_bool'],
+              eval_results['arg0_overlap_f1'], eval_results['arg1_overlap_f1'])
+    print 'Scores: %s' % scores
+
+    print 'Learning classification on full data set...'
+    node_df, node_dict = pcc_to_arg_node_gold(same_sentence_connectives, syntax_dict)
+    classification_dict = learn_main_arg_node(node_df,
+                                              syntax_dict,
+                                              node_dict,
+                                              precalc_features=features,
+                                              feature_list=feature_list,
+                                              label_features=label_features)
+    print '...done'
+
+    if pickle_classifier:
+        classification_dict.pop('node_featurizer')  # Cannot pickle a function
+        classifier_folder = os.path.join(pickle_folder, 'classifiers/')
+        if not os.path.exists(classifier_folder):
+            os.mkdir(classifier_folder)
+        id_ = uuid.uuid4().get_hex()
+        classification_path = os.path.join(classifier_folder, '%s_argspan_classification_dict.pickle' % str(id_))
+        print 'Pickling arg span classification data to %s' % classification_path
+        import ipdb; ipdb.set_trace()
+        with open(classification_path, 'wb') as f:
+            pickle.dump(classification_dict, f, pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(classifier_folder, 'classifier.log'), 'a') as f:
+            f.write('arg_span\t%s\t%s\t%s\n' % (
+                id_, scores, str(feature_list)))
 
 
 if __name__ == '__main__':

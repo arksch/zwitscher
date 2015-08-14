@@ -160,11 +160,13 @@ class Discourse(object):
     #         print [[a['word'] for a in anno] for anno in self.annotations.itervalues()]
     #         print [self.tokens[s[0]:s[1]] for s in self.sentences]
 
-    def load_tiger_syntax(self, tiger_trees):
+    def load_tiger_syntax(self, tiger_trees, set_sentences=True, load_tokens=False):
         """
         Loading annotations from the syntax files
         :param tiger_trees: Trees with syntactic information, see zwitscher.utils.tree.ConstituencyTree
         :type tiger_trees: list
+        :param set_sentences: set sentences as given by the trees
+        :param load_tokens: load the tokens from the trees
         """
         self.syntax = tiger_trees
         # Setting the sentences as they are given by the trees
@@ -174,7 +176,14 @@ class Discourse(object):
             right_boundary = left_boundary + len(tree.terminals)
             sentence_boundaries.append((left_boundary, right_boundary))
             left_boundary = right_boundary
-        self.set_sentences(sentence_boundaries)
+
+        if set_sentences:
+            self.set_sentences(sentence_boundaries)
+
+        if load_tokens:
+            self.tokens = []
+            for tree in tiger_trees:
+                self.tokens.extend([ter.word for ter in tree.terminals])
 
         # Sanity check: Do we have as many annotated tokens as tokens in the discourse?
         if not len(self.tokens) == sum([len(tree.terminals) for tree in self.syntax]):

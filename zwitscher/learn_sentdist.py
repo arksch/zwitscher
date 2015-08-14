@@ -68,20 +68,21 @@ def main(feature_list=['connective_lexical', 'length_connective',
     print 'Cleaned data'
 
     clf, scores, le = learn_sentdist(clean_pcc, feature_list=feature_list, label_features=label_features)
-
+    classification_dict = {'sent_dist_classifier': clf,
+                           'feature_list': feature_list,
+                           'label_features': label_features,
+                           'label_encoder': le}
     if pickle_classifier:
         classifier_folder = os.path.join(pickle_folder, 'classifiers/')
         if not os.path.exists(classifier_folder):
             os.mkdir(classifier_folder)
-        id = uuid.uuid4().get_hex()
-        print 'Pickling classifier to %s' % os.path.join(classifier_folder, '%s_classifier_sent_dist.pickle' % str(id))
-        with open(os.path.join(classifier_folder, '%s_classifier.pickle' % str(id)), 'wb') as f:
-            pickle.dump(clf, f, pickle.HIGHEST_PROTOCOL)
-        print 'Pickling label encoder to %s' % os.path.join(classifier_folder, '%s_encoder.pickle' % str(id))
-        with open(os.path.join(classifier_folder, '%s_encoder.pickle' % str(id)), 'wb') as f:
-            pickle.dump(clf, f, pickle.HIGHEST_PROTOCOL)
+        id_ = uuid.uuid4().get_hex()
+        classifier_path = os.path.join(classifier_folder, '%s_sent_dist_classification_dict.pickle' % str(id_))
+        print 'Pickling sent_dist classifier to %s' % classifier_path
+        with open(classifier_path, 'wb') as f:
+            pickle.dump(classification_dict, f, pickle.HIGHEST_PROTOCOL)
         with open(os.path.join(classifier_folder, 'classifier.log'), 'a') as f:
-            f.write('%s\t%f\t%s\n' % (id, scores.mean(), str(feature_list)))
+            f.write('sent_dist\t%s\t%f\t%s\n' % (id_, scores.mean(), str(feature_list)))
 
 
 if __name__ == '__main__':

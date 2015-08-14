@@ -71,6 +71,31 @@ def flat_index_to_nested(flat_sents, flat_indices, sent_to_index_dict=None):
     return nested_indices
 
 
+def nested_indices_to_flat(nested_connectives, flat_sentences):
+    """ Nested connective positions to flat positions
+
+    :param nested_connectives: e.g. [[(0,1),(0,2)], [(1,5)]]
+    :type nested_connectives: list
+    :param flat_sentences:
+    :type flat_sentences:
+    :return:
+    :rtype: list
+    """
+    nr_of_sents = len(flat_sentences)
+    sentence_starts = {}
+    start = 0
+    for i in range(nr_of_sents):
+        sentence_starts[i] = start
+        sentence_length = flat_sentences[i][1] - flat_sentences[i][0]
+        start += sentence_length
+
+    flat_indices = []
+    for conn_nested in nested_connectives:
+        conn_flat = [sentence_starts[sent] + tok for (sent, tok) in conn_nested]
+        flat_indices.append(conn_flat)
+    return flat_indices
+
+
 def subset(list1, list2):
     """ Helper to tell whether list1 is a subset of list2
     """
@@ -161,10 +186,18 @@ def pcc_to_arg_node_gold(same_sent_pcc, syntax_dict):
         sentence = conn_series['sentences'][sent]
         syntax_id = conn_series['syntax_ids'][sent]
         syntax_tree = syntax_dict[syntax_id]
-        insent_arg0 = [tok for (sent, tok) in conn_series['arg0']]
-        insent_arg1 = [tok for (sent, tok) in conn_series['arg1']]
-        label_arg_node(insent_arg0, syntax_tree, label=0)
-        label_arg_node(insent_arg1, syntax_tree, label=1)
+        arg0 = conn_series['arg0']
+        arg1 = conn_series['arg1']
+        if isinstance(arg0, float):
+            insent_arg0 = np.NaN
+        else:
+            insent_arg0 = [tok for (sent, tok) in arg0]
+            label_arg_node(insent_arg0, syntax_tree, label=0)
+        if isinstance(arg1, float):
+            insent_arg1 = np.NaN
+        else:
+            insent_arg1 = [tok for (sent, tok) in arg1]
+            label_arg_node(insent_arg1, syntax_tree, label=1)
         connective_pos = [tok for sent, tok in conn_series['connective_positions']]
         sent_data = {'sentence': sentence,
                      'arg0': insent_arg0,
@@ -172,7 +205,7 @@ def pcc_to_arg_node_gold(same_sent_pcc, syntax_dict):
                      'connective_positions': connective_pos,
                      'syntax_id': syntax_id}
         for node in [node for node in syntax_tree.nodes if not node.terminal]:
-        #for node in set(list(syntax_tree.iter_nodes(include_terminals=False))):
+            #for node in set(list(syntax_tree.iter_nodes(include_terminals=False))):
             # Don't have node as a index, since it is easier to access with int
             node_data = {}
             node_id = node.id_str
@@ -194,3 +227,14 @@ def same_sentence(clean_pcc):
     :rtype: pd.DataFrame
     """
     return clean_pcc[clean_pcc['sentence_dist'] == 0]
+
+
+def different_sentence(clean_pcc):
+    """ Filter out those connectives that have the argument in the different sentences
+
+    :param clean_pcc:
+    :type clean_pcc: pd.DataFrame
+    :return:
+    :rtype: pd.DataFrame
+    """
+    return clean_pcc[clean_pcc['sentence_dist'] != 0]
