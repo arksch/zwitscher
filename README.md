@@ -85,18 +85,18 @@ You can run tests with
 ### Possible Improvements
 
 - Better features (features.py)
--- Syntactic features for sentence distance
--- Not only use the first connective word for argument span features
--- Us
+  - Syntactic features for sentence distance
+  - Not only use the first connective word for argument span features
+  - Us
 - Better evaluation
--- Nested cross-validation, as the current evaluation is biased by selection of
+  - Nested cross-validation, as the current evaluation is biased by selection of
 the best classifier
--- Evaluate the full pipeline, not only the sentence distance and argument span
+  - Evaluate the full pipeline, not only the sentence distance and argument span
 labeling separately
--- More meaningful metrics, that allow to evaluate what actually goes wrong
--- Do not count punctuation
--- Calculate some baselines
--- Evaluate the labeling for argument spans in different sentences
+  - More meaningful metrics, that allow to evaluate what actually goes wrong
+  - Do not count punctuation
+  - Calculate some baselines
+  - Evaluate the labeling for argument spans in different sentences
 - Try other ways to create argument spans from the argument nodes
 (Lin et al use tree subtraction, but that might not be a good choice for PCC)
 - Try other classification algorithms
