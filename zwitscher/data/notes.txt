@@ -29,13 +29,13 @@ Deal with these errors:
 <connective id="3" relation="contrast">doch</connective>
 
 ipdb> len(results_pd)
-1090
+1090 100.%
 ipdb> len(results_pd[results_pd['cont_type'] == 'cont'])
-1053
+1053 96.6%
 ipdb> len(results_pd[results_pd['cont_type'] == 'discont'])
 37
 ipdb> len(results_pd[results_pd['phrase_type_0'] == 'single'])
-1056
+1056  96.8% of continuous
 ipdb> len(results_pd[results_pd['phrase_type_0'] == 'phrasal'])
 34
 ipdb> len(results_pd[results_pd['phrase_type_1'] == 'phrasal'])

@@ -10,211 +10,184 @@
 \usepackage[nottoc,notlot,notlof]{tocbibind} %Literatur wird im Inhaltsverzeichnis aufgeführt
 
 \author{Arkadi Schelling\footnote{Student of the M.~Sc.~"Cognitive Systems" at the Univ. of Potsdam, Stud.-ID 779135, arkadi.schelling@gmail.com}}
-\title{Hierarchical Task Network Planning with Answer Set Solving\linebreak
-	\normalsize A Translation Software from SHOP2's Lisp code to Gringo and Clasp}
+\title{Zwitscher\linebreak
+	\normalsize Argument Span Labeling for German Discourse Connectives}
 
 \begin{document}
-\lstset{basicstyle=\footnotesize, breaklines=true, language=Prolog, frame=single, deletekeywords={op, var, time, not}} % Setting the environment for included code
+\lstset{basicstyle=\footnotesize, breaklines=true, language=Python} % Setting the environment for included code
 \maketitle
 \hfill
 \tableofcontents % Contents on the title page
 \pagebreak
 
 \section{Introduction}
-Hierarchical Task Network planning -- or HTN Planning -- is an approach in Artificial Intelligence to automated planning and scheduling. Chapter \ref{HTNplan} explains the basics of HTN planning. There are several domain-independent HTN-planning softwares. Section \ref{SHOP} deals with one of the most performant such systems -- SHOP2. A more general domain-independent planning software is Answer Set Solving, like the Potassco system explained in section \ref{GriCla}. This article tries to use the more general approach of Potassco to solve HTN problems. For comparison of the two approaches a translation script has been written and is explained in chapter \ref{Trans}. Due to the complex optimization of SHOP2 to solve HTN planning, this translation script could not be completely finished. The current incomplete state of planning HTN problems with Answer Set Solving does not keep up with the performance of SHOP2. Still, the rough theoretical treatment of the two systems' differences in chapter \ref{Eval} suggests that even a complete translation will not change this inferiority of Answer Set Solving to SHOP2 in the realm of HTN planning.
+
+\begin{quote}
+Discourses are tactical elements or blocks operating in the field of force relations; there can exist different and even contradictory discourses within the same strategy; they can, on the contrary, circulate without changing their form from one strategy to another, opposing strategy.\\
+\quad Michel Foucault - History of Sexualiy, vol. I, pp. 101--102.
+\end{quote}
+
+Foucault's discourse theory is notoriously hard to grasp, as computational linguists we therefore restrict ourselves to a less ambitious and extensive theory of discourse. Still, discourse theory in computational linguistics also tries to formalise the idea of a discourse made up of blocks that are operating in some relations to each other. In this report we are focussing on German discourse connectives and their argument spans. For example the following sentence shows the underlined connective "\underline{Und}" connecting a bold internal argument with a an italicized external arguement.
+
+\begin{quote}\label{PCCquote}
+\textit{Das Land hat künftig zu wenig Arbeit für zu viele Pädagogen.} \underline{Und} \textbf{die Zeit drängt.}\\
+\quad Potsdam Commentary Corpus (maz-000001-10)
+\end{quote}
+
+This report first gives a short overview of the Penn Discourse Tree Bank and Potsdam Commentary Corpus, as well as the first end-to-end discourse parser for the PDTB by \cite{Lin12}.
+In the second part the scope of the project is explained and the main details of the used architecture and algorithms are layed out. The last part concludes with evaluation of the approach and further steps on the way towards an end-to-end Discourse Parser for German Twitter data.
 
 
-\section{Hierarchical Task Network Planning}\label{HTNplan}
-HTN planning is a branch of AI that tries to realize a sequence of actions to reach given goals. For this the world is regarded as a collection of states, where the states can be changed by actions. A problem description needs to describe the rules how an action changes the states of the world. An instance of the problem consists of initial states and goal states, for which the planner has to find a solution, that is a sequence of actions to change the initial states into the goal states. For HTN the given restrictions to this general description are subject to further simplifications of the following form:
+\section{PDTB-style Discourse Parsing}\label{DiscParse}
+In light of the pragmatical constraints that are imposed when using algorithmical analysis for labeling blocks and discourse relations, two main theories have evolved. Apart from the tree structured Rhetorical Structure Theory, there is work based on the Penn Discourse Tree Bank.
+
+\subsection{The Penn Discourse Tree Bank}
+The Penn Discourse Tree Bank 2.0 (PDTB) is adding discourse information to all the Wall Street Journal texts of the syntactical annotated Penn Tree Bank. Based on this available data, since 2008 several papers have been published to solve separate tasks connected to discourse parsing. The first paper to create an end-to-end discourse parser has been \cite{Lin12}.
+Since Discourse Parsing is still far from being solved, it seems a wise choice to base the current research on texts for which many NLP tasks have already been solved. The downside to this is a bad generalization to texts outside a financial scope.
+
+The PDTB labels each discourse connective with a relation and two argument spans. The discourse connective itself is part of one of the arguments, the internal argument, also called Arg1. The other argument is called external argument or Arg2. Furthermore, the PDTB does not only label explicit connectives that have a fixed token representation, but also implicit connectives and several further relations \cite{PDTB}. The discourse relations labeled by the PDTB are organised in a three layered tree structure.
+
+\subsection{The Potsdam Commentary Corpus}\label{PCC}
+The Potsdam Commentary Corpus 2.0 (PCC) is a collection of German newspaper texts, that have been annotated with syntax trees and several discourse information \cite{stede2014pcc}. Apart from nominal coreference and RST information, it also includes an annotation of connectives and arguments, that is similar to the PDTB.
+
+The most important differences between the PCC and the PDTB are the following:
 \begin{itemize}
-\item The initial state is unique and known
-\item The actions are deterministic
-\item Only one action at a time is possible
-\item There is only one agent
+\item The PCC does not annotate neither implicit connectives nor any of the other relations, that are annotated in the PDTB.
+\item The PCC also does not label attribution spans.
+\item In the PCC discontinuous connectives (e.~g. "entweder~...~oder") belong to both argument spans and further these argument spans are overlapping with the external argument (connected to "entweder") being a superset of the internal argument (connected to "oder")
 \end{itemize}
-This set of simplifications is known as the Classical Planning Problem.\footnote{\url{http://en.wikipedia.org/wiki/Automated_planning_and_scheduling}}
-In this paper we are still imposing further simplifications:
-\begin{itemize}
-\item There are only finitely many initial and goal states
-\item The state values are discrete
-\end{itemize}
-These simplifications are necessary, since neither the SHOP2 System nor the Automatic Promblem Solving with Gringo and Clasp can deal with infinite sets. Further on, another feature of HTN problems is the addition of methods to the problem description. Such methods are compound tasks, consisting of a sequence of actions or simpler methods, i.~e. methods that consist of less actions. These methods help in two ways -- First, they can be used to decrease the size of the search space. Second, the are closer to the way humans think how to solve a task, and can thus easilier be described.
 
-Since each action, also called primitive task, changes certain states to other states, it has exactly the deleted states as a prerequisite for its application. The compositionality of methods lets them inherit these prerequisites from its primitive tasks. Due to these constraints on the application of methods we are thus having a network of tasks -- a Hierarchical Task Network.
+Parsing the PCC's XML file structure was not an easy task, even more since some of the annotations are contradictory. It was possible to parse 1081 connectives from 171 discourses, where one discourse consists of one newspaper text. From these connectives 96.6\% are continuous and 96.7\% of the continuous connectives consist of a single word. None of the total 37 discontinuous connectives extends over sentence boundaries.
 
-To represent an HTN planning problem we need to be able to represent the following:
-\begin{enumerate}\label{HTNreq}
-\item Atoms that represent our world
-\item Constants and variables
-\item Arithmetic functions
-\item Initial states, states at different times and goal states
-\item Actions, including prerequisites, deleted states and added states
-\item Sequences of actions and compound actions
-\end{enumerate}
-Further on we have to be able to check which actions are not constrained and choose one of these as the next action as long as the goal states are not yet reached completely.
+\subsection{The DiMLex}
 
+Another corpus that can be used for alalysing German connectives is the Discourse Markers Lexicon (DiMLex). This lexicon combines orthographical, syntactical and semantical information of nearly all German connectives.
 
-\section{Design of the System}
-This section describes how an HTN problem can be solved by two different systems. First, the SHOP2 system is explained, second, the Gringo and Clasp framework for ASS.
+Even though it is still work in progress, the orthography variants and canonical spelling are useful to cluster different spellings of connectives together. One further complete information is the disambiguity of the connective, which can be used to check whether a token disambiguously denotes a connective or can as well be used as a non-connective word.
 
-\subsection{SHOP2}\label{SHOP}
-The SHOP2 system is an HTN planner from the University of Maryland written in Lisp around 2000 and winning important rewards on the International Planning Competition 2002. 
-The basic SHOP system is described in \cite{Nau99} and its improved successor SHOP2 in \cite{Nau03}. It plans for tasks in the same order as they shall later be executed. This is called a total-order forward search. An explanation of the algorithm is found at \cite[p.~386ff]{Nau03}, which basically describes it as non-deterministically choosing next steps that are without constraints. The main upside of this approach is that the system always knows the exact state of the world. Therefore, at each decision point the system knows all constraints and the space of possible tasks is as small as possible. The downside of this approach is that the search space for possible solutions can only be searched by forward propagation. Other algorithms try to tackle the big size of the search space by parallel solution of sub tasks.
+The PCC and DiMLex are not completely compatible. They are using different and also slightly inconsistent or incomplete relations. Also, even though the DiMLex should be close to complete, there was a list of over 40 PCC connectives, that could not be related to a DiMLex connective, either due to a mislabeling in the PCC, a gap in the DiMLex or a different notion of connectives.
 
-In the given example problem descriptions of the SHOP2 System this downside is alleviated by three basic techniques of "hand-tailoring" a problem:
-\begin{itemize}
-\item Constructing higher order tasks, so called methods, that can be broken down into first order tasks. For all example problem descriptions this goes as far as creating a method to solve a whole problem instance, consisting of smaller and smaller sub-methods. This decreases the search space immensely.
-\item Flagging items according to their goal state, e.~g. boxes that have to be moved. This is essentially imposing a search logic that is not forward-propagating.
-\item Imposing axioms onto the states. An axiom is a relation between states, that has to hold during all steps. These axioms can be used additional to the prerequisites of methods and tasks to reduce the space of non-constrained next steps. 
-\end{itemize}
-According to \cite[p.~382]{Nau03} the domain knowledge encoded in the methods can reduce the complexity of the problem from exponential to polynomial time.
+\subsection{Lin et al.}
 
+This subsection deals with the Lin et al's paper \cite{Lin12}, which is the first end-to-end discourse parser for PDTB-style connectives. Disregarding the few differences between PDTB and PCC that were pointed out in subsection \ref{PCC}, we are aiming to follow the paper to create an end-to-end parser for German with the PCC as training data.
 
-\subsection{Using Gringo and Clasp for HTN Planning}\label{GriCla}
-Answer Set Solving is a declarative programming technique, that tries to solve big search problems. A search problem is expressed as a set of logical rules. A stable model for this set of rules is a solution to the problem.
-
-The programs Gringo and Clasp are part of the Potsdam Answer Set Solving Collection.\footnote{\url{http://potassco.sourceforge.net/}} Current Answer Set Solvers like Clasp are working without variables. To solve a problem with variables, a grounder is needed to create an equivalent variable-free program. Gringo is such a grounder. 
-Clasp is following the paradigm of conlict-driven Answer Set Programming. The classical paradigm of ASP has been the DPLL approach with unit propagation and backtracking to solve conflicts. This approach has been improved with conflict-driven constraint learning (CDCL). In contrast to DPLL the CDCL approach is learning new constraints from the derived conflicts. It also performs backjumping instead of backtracking, thus finding solutions in very few steps.
-
-We can use Answer Set Solving to solve HTN problems. For this approach we compare the list of required descriptivity on page~\pageref{HTNreq} with the syntax of ASP. The first three points can directly be translated as atoms, constants, variables and the implemented arithmetic functions.
-The major problem we are running into when formularizing a sequence of actions is the formularization of time. We cannot set the maximum time to infinity, since this would lead to an infinite amount of possible solutions. Nevertheless, we do not know the actual size of the solution, which can in fact be arbitrary large. As a simple solution we set a maximum number of steps, not allowing bigger solutions.
-
-In this setting with time steps, a state will be a function on the time and possibly more than one variable. An action will change the deleted and added states, all other states shall not change -- the law of inertia. To solve a problem we simply have to choose an action at each step from the set of non constrained actions until the goal states are all reached.
-
-This way of finding a solution is neither quick, nor will it find optimal solutions. To find optimal solution each action should be assigned a cost. We can then use the optimization methods of Clasp to minimize these costs.
-
-It is a bigger question to improve the runtime. For this, it is possible to include further optimization as in the SHOP systems. One easy implementation is also including axioms, i.~e. Horn Clauses, to reduce the number of non constrained actions at each step. Further, methods can be created by combining single actions into a sequence, that has special prerequisites to be called. These methods again allow for optimization techniques like auxiliary states and the implementation of domain specific knowledge.
-
-\subsection{Implementation of HTN planning in ASP}\label{HTNwithASP}
-
-This section is explaining the basic constructs to solve HTN planning with ASP as explained in the previous section \ref{GriCla}.
-
-Since functions cannot be applied to arbitrary atoms, we need to save a domain with them. Initial states are simply states at time 0. A typical instance of a problem is given by this small block problem. Note that the description of the initial state is a complete and explicit description, i.~e. there is no indirect conclusion that a block is clear, since no other block is on it:\label{ProbDesc}
-\begin{lstlisting}
-% An atom is of the form domain(atom). %
-block(b1).
-block(b2).
-
-% An initial state is of the form state(state_name(atoms), 0). %
-state(ontable(b1), 0).
-state(clear(b1), 0).
-state(ontable(b2), 0).
-state(clear(b2), 0).
-
-% Goals are of the form goal(state_name(atoms)). %
-goal(on(b2, b1)).
-\end{lstlisting}
-
-These initial states can be changed by operators. An operator has a name, variables that it can apply to and prerequisites when it can be applied. When the planner decides to use an operator as its current task, this is changing the state of the world.
-
-\begin{lstlisting}
-% A typical operator %
-operator(pickup).
-operator_var(pickup, B) :- block(B).
-operator_prerequisite(pickup, B, T) :- state(arm(empty), T), state(clear(B), T), state(ontable(B), T), operator_var(pickup, B).
-deleted_state(arm(empty), T) :- currentTask(pickup, B, T).
-deleted_state(clear(B), T) :- currentTask(pickup, B, T).
-deleted_state(ontable(B), T) :- currentTask(pickup, B, T).
-added_state(arm(B), T) :- currentTask(pickup, B, T).
-\end{lstlisting}
-
-The next part of code is used to describe the state of the world. They are changed by the applied operators. Even though there is no maximum number of steps that can solve any problem, we are setting it to 100, so we do not run into infinite solutions.
-
-\begin{lstlisting}
-% Setting the maximum number of steps %
-maxtime(100).
-
-% Law of inertia %
-time(0..T) :- maxtime(T).
-state(X, T+1) :- time(T), state(X, T), not deleted_state(X, T).
-state(X, T+1) :- time(T), added_state(X, T).
-:- deleted_state(X, T), not state(X,T).
-
-% Checking whether we are finished within the maximum time %
-not_finished(T) :- time(T), goal(State), not state(State, T).
-:- goal(State), not state(State, T), maxtime(T).
-\end{lstlisting}
-
-As long as the problem is not solved the following code guesses next steps. The second line minimizes the found solutions for their costs.
-
-\begin{lstlisting}
-% Stupid Guessing Solver %
-1 {currentTask(Op, Var, T) : operator_prerequisite(Op, Var, T), operator(Op) } 1 :- time(T), not_finished(T).
-#minimize{C, T : action(Op, Var, T, TT, C)}.
-\end{lstlisting}
-
-These pieces of code are in principal enough to solve any given instance of a described problem. Still, without further optimization the solving will take a long time. One way to optimize further are additional states, that are derived by axioms, as in the SHOP system.
-
-\begin{lstlisting}
-% A typical axiom (or Horn Clause) %
-state(needtomove(B), T) :- state(on(B, C), T), goal(on(B, D)), C != D.
-\end{lstlisting}
-
-Another way to optimize the runtime of the program is the implementation of domain specific knowledge with methods. The prerequisites are inherited from the operator. For perfomance reasons it is better to write them out, then to calculate the inheritance again each step.
-
-\begin{lstlisting}
-% A typical method %
-method(move).
-method_var(move, (B, C)) :- block(B), block(C).
-method_prerequisites(move, (B, C), T) :- state(needtomove(B), T), state(clear(B), T), state(clear(C), T).
-currentTask(pickup, B, T) :- currentTask(move, (B, C), T).
-currentTask(stack, (B, C), T+1) :- currentTask(move, (B, C), T).
-\end{lstlisting}
-
-
-\section{Translation from SHOP2 to ASP}\label{Trans}
-The main work of this project is a translation script from SHOP2 to Answer Set Programming. This translation should support comparability between the two systems. This chapter will show several problems in the translation of a SHOP2 problem into ASP and if they were solved in this project. Some of these problems are due to the SHOP2 syntax being optimized for HTN and their complexity complicates the translation. Other problems are based on structural differences between SHOP and ASP that cannot be translated at all, or at least not fully automatic.\footnote{A description of the SHOP2 syntax can be found in \cite[ch.~2.1]{Nau99} and on \url{http://www.cs.umd.edu/projects/shop/documentation.html}.}
-
-\subsection{The Translation Script}
-The translation script works semi-automatically. This allows to partially solve the structural differences between HTN planning with SHOP and ASP, explained in the next section \ref{SyntStruc}.
-
-The code can be downloaded with a readme from \url{https://github.com/arksch/Shop2ASS}. The basic algorithm works as follows:
+The general pipeline of Lin et al's parser is as follows:
 \begin{enumerate}
-\item Parse atoms, initial states and goals from the input file according to the line numbers passed by the user
-\item Clean the Lisp code: Strip off comments, strip search keywords, delete ASP operators like - and !, write out Lisp shorthands like \textit{nil}, convert variables to capitals.
-\item Add the general ASP solver and some documentary to the output file.
-\item Search for axioms and operators by their keywords \textit{:-} and \textit{:operator}, parse them, translate them into ASP and write to the output file. For each operator a feedback from the user is asked, to specify the domain and implicit prerequisites.
+\item Connective classifier -- Find possible explicit connectives in a text and disambiguate them.
+\item Argument span labeler -- Find the internal and external arguments of the connectives:
+	\begin{enumerate}
+	\item Argument position classifier -- Find the sentence, where the external argument is located.
+	\item Argument extractor -- Label the spans of the arguments, especially when both are within the 									same sentence.
+	\end{enumerate}
+\item Explicit classifier -- Classify the relations of the explicit connectives.
+\item Non-explicit classifier -- Add non-explicit connectives between sentences that are not explicitly connected and classifiy their relations.
+\item Attribution span labeler -- Find attribution spans in all labeled connectives.
 \end{enumerate}
 
-Due to their complexity, the translation of SHOP-methods into ASP was not implemented.
+The aimed at German parser focusses on the first two points, as the PCC's and DiMLex' relation information are not reliable and the PCC has neither non-explicit connectives, nor attribution spans. Lin et al are giving detailed information about the set of features that they were using for all stages. Of interest for this report are mainly both substeps of the second step.
 
-\subsection{Syntactic and Structural Translation Issues}\label{SyntStruc}
+The argument position classifier is straight forward. Since more than 99.9\% of the arguments are either in the same sentence (SS) or in the previous sentence (PS) of the connective, this classifier only has to disambiguate between two values. The  list of features is a mixture of connective strings, the position within the sentence as well as part of speech tags of the previous words. The paper does not specify what kind of classifier is used.
 
-A not complete list of syntactical sugar to SHOP that makes translation a nuisance:
+In the PS case both arguments are just labeled as the full sentence. Ignoring improvements on that easy task, most of the paper is dedicated to the task of extracting the argument spans in the SS case.  To deal with the four cases of the Arg1 preceding/succeeding Arg2 or one of them being embedded in the other, Lin et al. are inspired to a tree subtraction algorithm \cite{Lin12}[p.~17]. For this, they are labeling the closest parent node, that spans the full argument. On this data they are training two maximum entropy classifiers to predict the probability of a node to be either the internal or external argument node. With these classifiers they pick the two nodes with the highest probabilities to be the argument nodes of a connective. The features they are using are a collection of string, syntactic category of the connective and a number of constituency tree features.
+
+Even though they are not explicitly writing it, the used features suggest that Lin et al. are not dealing with connectives that consist of multiple words, esp. not with discontinuous connectives.
+
+In the result, they reach a very good F-score\footnote{Whatever an F-score means for a regression problem has to stay a secret of Lin et al...} of 97.94\% to identify the sentence positions of the arguments.
+Furthermore, they got a reasonable F-scores of 86.63\% for identifying the external argument node and 93.41\% for the internal argument node, which was calculated without error propagation from stage 1 and with gold standard constituency trees.
+The overall performance was measured with a partial match of the nouns and verbs and with a perfect match metric. The resulting F-scores without error propagation and gold standard syntax parses were 86.67\% (partial) and 59.15\% (perfect) for the external argument and 99.13\%/82.23\% for the internal argument.
+
+
+\section{A Discourse Parser for German}
+
+This section explains how the approach of Lin et al. has been adapted to fit into a pipeline to parse discourse from German Tweets. The code and documentation of the code can be found on \url{https://github.com/arksch/zwitscher}.
+
+\subsection{Adapting Lin et al.'s approach}
+
+Following the first analysis of Lin et al. regarding the sentence distances between the arguments, it could be shown that about 1\% of the arguments are not of the case SS or PS. This might be due to bad sentence boundaries because of abbreviations, but still it seems that the PCC labels longer distances than the PDTB.
+
+The current code architecture allows an easy implementation of new features. The default features used for argument position labeling are:
 \begin{itemize}
-\item SHOP's if-then-else fashion for axioms and methods is complicating the translation. This means, that the head of an axiom of the form \textit{(:- head tail1 tail2)} will be true if tail1 is true or tail1 is false and tail2 is true. For methods of the form \textit{(:method head pre1 tail1 pre2 tail2)} it means, that tail1 will be applied if pre1 is true and tail2 will be applied if pre1 is false and pre2 is true.
-\item SHOP's omission of brackets in cases, when a collection of atoms has size 1. E.~g. \textit{(:- (place ?x) (depot ?x))} instead of \textit{(:- (place ?x) ((depot ?x)))}
-\item SHOP's additional convenience methods: \textit{forall}, \textit{!!}, \textit{:protection}, \textit{:ordered}, \textit{:unordered}, \textit{:task}
-\end{itemize} 
-
-Due to time reasons only the if-then-else fashion for axioms can currently be correctly translated into ASP.
-
-The following list of structural differences cannot be automatically translated and each is solved individually by the translation script.
-\begin{itemize}
-
-\item The design of HTN planning with ASP explained in section \ref{HTNwithASP} specifies domains of all atoms. Apparantely SHOP2 does specify the domain of atoms, but never uses them. The operators seem to infers their domain only from the added and deleted states. Appart from the superfluous information in the atoms' domains, another downside of the SHOP approach is the coupling of operators' and states' definitions. The translation script fixes this issue by requiring the user to add the domains of the operators.
-
-\item A SHOP problem description does not make a syntacic difference between domains and states. Problems deal with goals differently, e.~g. with an \textit{achieve-goals} method in the \textit{Blocks Problem} or the \textit{:task} keyword in the \textit{Logistics Problem}. This is solved by requiring the user to input the lines that describe atoms, initial states and goals.
-
-\item Logically, some operators should have prerequisites. E.~g. the arm of the block problem robot being empty, when it wants to pick up a block. SHOP's syntax allows to include these prerequisites into the methods that call these operators. This seems to be a bad practice, but unless methods can be translated, these prerequisites have to be manually added while translation.
-
-\item SHOP's search keywords to optimize the search within single methods improve the speed, but cannot be translated to ASP. Precisely this would require to search a specific part of the search space with depth first search, complete search, depth first search for shallowest plan or iterative deepening search. The translation script deletes these keywords.
-
+\item connective canonical orthography by DiMLex
+\item length of previous sentence
+\item length of the same sentence
+\item length of next sentence
+\item words in the connective
+\item numbe of tokens inside the sentence before the connective
+\item second previous token
+\item previous token
+\item next token
 \end{itemize}
+Note that due to time reasons this step does not yet use any part of speech tags, even though they are highly promising to improve the performance. Another feature that could be tried due to Lin et al. is the exact spelling of the connective, e.~g. a capital "Und" will always have its external argument in the previous sentence.
+
+The next important step that is not explained by Lin et al. is the creation of gold data for the classification of nodes as argument nodes. This gold data is created by picking the first parent node that spans the complete argument as the argument node. Again, I did not find time to evaluate the accuracy of this method.
+
+The features to attach argument node probabilites to the nodes are the following:
+\begin{itemize}
+\item connective canonical orthography by DiMLex
+\item number of node siblings
+\item node category
+\item previous node category on the path to the connective
+\end{itemize}
+Many technical problems have been solved to combine the syntax trees with the connective information. For all of these features only the first word of the connective is taken. As 96.7\% of the connectives consits of one word, this should not influence the results too much. Still, the calculation of features takes a long time. Therefore, the following features have been implemented but remain unused:
+\begin{itemize}
+\item relative position of the connective within the nodes terminals
+\item left and right siblings of the connective
+\end{itemize}
+Lin et al. further use the complete path including directions up and down from the node to the connective and the connectives syntactic category (subordinating, coordinating or adverbial). Especially the combination of these two seems to promising, as many nodes are not on the direct path to the root. 
+
+A logistic regression classifier is then able to attach a probability to each node. Lin et al. are not explaining how they solve the conflict, when internal and external argument node are identical. Currently, my approach only deals with this in the next step.
+
+Once the argument nodes are picked, the argument spans have to be labeled. The first labeling step labels all children of the nodes as the respective arguments. The tree subtraction is calculated if one of the spans is a subset of the other as the complementary set. If the argument nodes are identical, this will lead to an empty set. In any case the connective is added to the internal argument. Instead of an empty external argument the original external argument without tree subtraction is picked.
 
 
+\subsection{Evaluation and Possible Improvements}
+This subsection gives a few evaluation results and tries to investigate why the argument span labeling is performing very poorly. Many points are asking for improvement with an optimistic "not yet".
+
+The baseline for picking the correct sentence for the external argument would be a majority classifier of 57\% in the same sentence.
+A 5-fold cross validation shows an accuracy of 91\%, thus immensely improving over the baseline. This result can surely be improved by taking part of speech tags into account. Afterwards it might be closer to Lin et al's "F-score" of 97.94\%.
+
+The results of the argument span labeling are very poor. A baseline of just labeling the full sentence as an argument has not yet been calculated and might even outperform our current approach. I did implement neither the partial metric of Lin et al. as the syntactic information is lacking, nor the perfect match metric, as it would be too bad to show any possible improvements. Instead, the implemented metrics are:
+\begin{enumerate}
+\item a percentage of overlap between gold standard and predicted argument spans
+\item the micro F1-score of the argument spans, i.~e. the global mean of the F1-scores for each argument span.
+\end{enumerate}
+Note, that in contrast to Lin et al. this is not yet disregarding punctuation.
+The resulting scores on a held out dataset of 20\% are:\\
+\begin{tabular}{l || c | r}
+   & Internal argument  & External argument \\
+   \hline
+   \hline
+ overlap percentage  & 24.2  & 28.3 \\
+   \hline
+ micro F1  & 22.9  & 25.1 \\
+\end{tabular}\\
+Hopefully, these results can be boosted by picking more meaningful features. Note, that for a meaningful evaluation, this would also require to use a triple or nested cross validation, which is not yet implemented in the code.
+
+A first investigation of a dozen connectives suggests that actually many argument nodes are picked correctly. This could mean that:
+\begin{enumerate}
+\item either the algorithm to create the gold argument nodes is not working correctly
+\item or that tree subtraction is not a good chocie for the PCC
+\item or that this approach does in general not work well for German general newspaper texts.
+\end{enumerate}
+A step for improvement could be to calculate the scores when using the argument nodes.
+
+The complete pipeline has not yet been evaluated, as it can be expected to perform even worse than the argument span labeling.
+
+A last part for improvement might be the correction of the PCC and DiMLex.
 
 
-\section{Evaluation of Correctness and Performance}\label{Eval}
-An important task of the translation script was the comparison of correctness and performance between SHOP and ASP. Since the translation script does not work completely, this task cannot be tackled. As stated in section \ref{SHOP} the hand-tailoring of methods is crucial to the performance of the SHOP system. Section \ref{SyntStruc} explained the main differences between SHOP and ASP that cannot be translated. Especially the search commands will have a crucial impact on the performance of SHOP.
+\subsection{Further Steps}
+In this subsection further steps towards an end-to-end Discourse Parser for German Twitter data are explained.
 
-Without the translation of methods into ASP, its performance is out of scope. Solving a block problem with only 10 blocks takes a few seconds, whereas SHOP can solve a block problem of 100 blocks in a split second. Due to this immense difference in performance, this section focusses on theoretical aspects of the runtime behaviour.
+One fellow project is dealing with picking possible connectives from German Tweets and disambiguating them. This output could be passed on to the command line script of my project. Furthermore, a module to solve the very difficult task of cleaning, chunking and parsing POS-tags from Tweets is already written. Still, to my knowledge a module to parse constituence trees is still lacking. An out of the box parser trained on other data will very likely perform poorly, due to the syntactical differences of Tweets that are close to spoken language.
 
-As stated in section \ref{GriCla}, the main advantage of ASP is its well developed search algorithm and conflict solution with CDCL. In contrast to this smartly implemented search, the optimization works by simply setting upper bounds. This is opposite to the SHOP approach and its problem description. Since SHOP always knows the complete world state, there is no action that can cause a conflict. The question is how SHOP is calculating the space of unconstrained possible next steps. Taking these steps, there should never be a conflict, since the system is only stupidly chosing non-conflicting methods to solve the given problem. It might run in circles, so the main point is the optimization by the design of special methods, encoding domain knowledge and special search commands. In the light of this architecture, it seems that the main advantage of ASP's CDCL approach does not hold. The SHOP2 system will never have to solve a conflict, but its main advantages are the fast forward-propagation through a tuned search space and a rather concise syntax to write down typical HTN problems.
+Furthermore, a good model for the non-linear structure of Tweets is missing. An important next step would thus be, to think about a way how to either create a linear discourse structure from Tweets or adapt the above explained algorithms to non-linear structures. 
+As always, real world data, esp. Twitter, is very dirty and unstructured, so it will be a challenging task to implement a script that chunks Twitter data into discourses.
 
+Due to ongoing work on the DiMLex one last implementation step that should soon be feasible is the relation labeling.
 
 
 \bibliographystyle{alpha}
-\bibliography{shop2ass}
+\bibliography{zwitscher}
 
 \end{document}

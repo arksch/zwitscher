@@ -1,0 +1,11 @@
+\begin{thebibliography}{LNK12}
+
+\bibitem[LNK12]{Lin12}
+Ziheng Lin, Hwee~Tou Ng, and Min-Yen Kan.
+\newblock A pdtb-styled end-to-end discourse parser.
+\newblock {\em Natural Language Engineering}, 2012.
+
+\bibitem[PDT]{PDTB}
+{\em The Penn Discourse Treebank 2.0 Annotation Manual}.
+
+\end{thebibliography}

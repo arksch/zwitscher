@@ -4,7 +4,7 @@ This package is a part of a project at the University of Potsdam. The goal was
 to parse Twitter discourse in a PDTB style. This part of the project assumes
 as an input a constituency tree including POS-tags and tokens, together with
 the sentence-nested positions of the connectives themselves. From this input
-the script *pipeline* labels the argument spans that belong to the connective.
+the script *pipeline.py* labels the argument spans that belong to the connective.
 
 The ideas for the discourse parser are along the lines of Lin. et. al.
 https://www.comp.nus.edu.sg/~nght/pubs/nle13.pdf
@@ -72,7 +72,8 @@ Options:
 
 The sentence distance classification reaches an accuracy of over 90%, which
 is a reasonable result over the baseline of 57% majority labeling with both
-arguments in the same sentence.
+arguments in the same sentence. Note, that this does not yet use syntactic 
+features.
 
 On the contrary, the argument span labeling only reaches an f-score of 23% for
 the internal argument span and 25% for the external argument span.
@@ -96,6 +97,8 @@ You can run tests with
 
 - Better features (features.py)
   - Syntactic features for sentence distance
+  - Use a dictionary for the words used in argument span labeling features
+  - Use capitalization
   - Not only use the first connective word for argument span features
   - Faster feature calculation
 - Better evaluation
@@ -103,13 +106,20 @@ You can run tests with
 the best classifier
   - Evaluate the full pipeline, not only the sentence distance and argument span
 labeling separately
+  - Wrap the argument span evaluation into a sklearn metric,
+  so that it can be used directly in the classification training
   - More meaningful metrics, that allow to evaluate what actually goes wrong
+  and are comparable to Lin et al (partial match of nouns and verbs, perfect
+  match)
   - Do not count punctuation
-  - Calculate some baselines
+  - Calculate some baselines and upper bounds
+     - Full sentence labeling for different sentences
+     - Labeling with the gold standard argument nodes
   - Evaluate the labeling for argument spans in different sentences
 - Try other ways to create argument spans from the argument nodes
 (Lin et al use tree subtraction, but that might not be a good choice for PCC)
 - Try other classification algorithms
+  - Don't train the classifier on other cases than previous and same sentence
 - Create command line arguments for the classifier training scripts
 - Improve the parsing or fix inconsistencies in the PCC
 - Fix one of the many ToDos in the code and refactor it to be readable
