@@ -9,6 +9,8 @@ the script *pipeline.py* labels the argument spans that belong to the connective
 The ideas for the discourse parser are along the lines of Lin. et. al.
 https://www.comp.nus.edu.sg/~nght/pubs/nle13.pdf
 
+For more information about the implementatin read the pdf in the article folder
+
 At the current state it is possible to parse from end to end,
 but the results are still rather poor. It is expected, that they can still
 be improved with a better feature set.
