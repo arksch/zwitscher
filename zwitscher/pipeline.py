@@ -2,6 +2,7 @@
 The pipeline to predict argument spans only from a syntax tree
 """
 import os
+import json
 import pickle
 
 import click
@@ -15,11 +16,21 @@ from gold_standard import nested_indices_to_flat, pcc_to_gold,\
 __author__ = 'arkadi'
 
 
-
 def label_arguments_in_different_sentences(different_sentence_connectives,
                                            connective_dict,
                                            flat_sentences):
-    for i in range(len(different_sentence_connectives)):
+    """ Creates argument spans in different sentences
+
+    Dumb approach: Just label the full sentence
+    :param different_sentence_connectives: dataframe with connective data in
+    the rows, and ['connective_positions', 'sentences'] as columns.
+    :type different_sentence_connectives: pd.DataFrame
+    :param connective_dict: {flat_conn_positions: connective}
+    :type connective_dict: dict
+    :param flat_sentences: [(0, 3), (3, 10)] sentence boundaries
+    :type flat_sentences: list
+    """
+    for i in different_sentence_connectives.index:
         row = different_sentence_connectives.ix[i]
         conn_positions = row['connective_positions']
         sentences = row['sentences']
@@ -34,42 +45,72 @@ def label_arguments_in_different_sentences(different_sentence_connectives,
             raise ValueError('Positions have not been classified')
         arg0 = [(arg0_sent, tok) for tok in
                 range(len(sentences[arg0_sent]))]
-        row['arg0'] = arg0
-        arg1 = [(arg1_sent, tok) for tok in
-                range(len(sentences[arg1_sent]))]
-        row['arg1'] = arg1
+
+        if arg1_sent >= 0:
+            arg1 = [(arg1_sent, tok) for tok in
+                    range(len(sentences[arg1_sent]))]
+        else:
+            arg1 = []
 
         flat_connective_positions = nested_indices_to_flat([conn_positions], flat_sentences)[0]
         disc_connective = connective_dict[tuple(flat_connective_positions)]
-        disc_connective.arg0 = arg0
-        disc_connective.arg1 = arg1
+        disc_connective.arg0 = nested_indices_to_flat([arg0], flat_sentences)[0]
+        disc_connective.arg1 = nested_indices_to_flat([arg1], flat_sentences)[0]
 
 
+filepath = os.path.dirname(__file__)
+datapath = os.path.join(filepath, 'data')
+default_syntax_path = os.path.join(datapath,'test_pcc/syntax/maz-00001.xml')
+default_connective_positions_path = os.path.join(datapath,'test_pcc/maz-00001_nested_conn_indices.json')
+default_sent_dist_path = os.path.join(datapath, 'classifiers/default_sent_dist_classification_dict.pickle')
+default_argspan_path = os.path.join(datapath, 'classifiers/default_argspan_classification_dict.pickle')
+@click.command(help='Running a pipeline to label argument spans in a syntax '
+                    'annotated discourse with known positions of connectives')
+@click.option('--syntax_trees_xml_path', '-s',
+              help='Path to a file with syntactic information in TigerXML format',
+              default=default_syntax_path)
+@click.option('--connective_positions_path', '-c',
+              help="Path to a file with nested connective positions in json format\n"
+                   "E.g. '[[[14, 0], [14, 5]], [[11, 0]], [[2, 0], [2, 1]]]'",
+              default=default_connective_positions_path)
+@click.option('--sent_dist_classification_path', '-sc',
+              help='Path to the sentence distance classifier trained with the '
+                   'learn_sentdist.py script',
+              default=default_sent_dist_path)
+@click.option('--argspan_classification_path', '-as',
+              help='Path to the argspan classifier trained with the '
+                   'learn_argspan.py script',
+              default=default_argspan_path)
 def pipeline(syntax_trees_xml_path,
-             connective_positions,
-             sent_dist_classification_pickle,
-             argspan_classification_pickle):
-    """
+             connective_positions_path,
+             sent_dist_classification_path,
+             argspan_classification_path):
+    """ Running a pipeline to label argument spans in a syntax annotated discourse
+    with known positions of connectives
 
-    :param syntax_trees_xml_path:
-    :type syntax_trees_xml_path:
-    :param connective_positions: nested positions (sent, tok) of the connectives
-    :type connective_positions: list
-    :param sent_dist_classification_pickle:
-    :type sent_dist_classification_pickle:
-    :param argspan_classification_pickle:
-    :type argspan_classification_pickle:
-    :return:
+    :param syntax_trees_xml_path: Path to TigerXML of the syntax to analyse
+    :type syntax_trees_xml_path: str
+    :param connective_positions_path: nested positions (sent, tok) of the connectives
+    :type connective_positions_path: str
+    :param sent_dist_classification_path: path to the sentence distance
+    classifier trained with the learn_sentdist.py script
+    :type sent_dist_classification_path: str
+    :param argspan_classification_path: Path to the argspan classifier trained with the learn_argspan.py script
+    :type argspan_classification_path: str
+    :return: prints the discourse to standard out
     :rtype:
     """
     # Open all files
     with open(syntax_trees_xml_path, 'r') as f:
         syntax_xml = f.read()
-    with open(sent_dist_classification_pickle, 'rb') as f:
+    with open(connective_positions_path, 'r') as f:
+        connective_positions = json.load(f)
+    with open(sent_dist_classification_path, 'rb') as f:
         sent_dist_classification_dict = pickle.load(f)
-    with open(argspan_classification_pickle, 'rb') as f:
+    with open(argspan_classification_path, 'rb') as f:
         arg_span_classification_dict = pickle.load(f)
 
+    #connective_positions = [[[11, 0]], [[2, 0], [2, 1]]]
     # Load the trees into one discourse object and get the tokens from the trees
     syntax_trees = parse_syntax(syntax_xml)
     discourse = Discourse()
@@ -148,14 +189,10 @@ def pipeline(syntax_trees_xml_path,
         connective.arg1 = flat_arg1_span
 
     print discourse.__str__()
+    return discourse
+
 
 
 if __name__ == '__main__':
-    syntax_path = 'data/test_pcc/syntax/maz-00001.xml'
-    connective_positions = [[(2, 0), (2, 1)]]
-    sent_dist_classification_pickle = 'data/classifiers/d7eaf2f0713f41b3b1d9ed1ad3acd194_sent_dist_classification_dict.pickle'
-    argspan_classification_pickle = 'data/classifiers/7ad155392ef74f428430765e55df4200_argspan_classification_dict.pickle'
-    pipeline(syntax_path,
-             connective_positions,
-             sent_dist_classification_pickle,
-             argspan_classification_pickle)
+
+    pipeline()

@@ -4,11 +4,9 @@
 Some scoring methods for our problem
 http://scikit-learn.org/stable/modules/model_evaluation.html
 """
-import random
 
 import numpy as np
 
-from sklearn.metrics import make_scorer
 from predict import predict_arg_node, label_argspan
 from features import node_featurizer as node_feat
 from learn import node_feature_dataframe
@@ -83,7 +81,6 @@ def overlap_f1(ground_truth, predictions):
         pred_len = len(predictions[i])
         tp = 0.0
         for gt_pos in ground_truth[i]:
-            #import ipdb; ipdb.set_trace()
             for pred_pos in predictions[i]:
                 if gt_pos == pred_pos:
                     tp += 1
@@ -177,9 +174,3 @@ def evaluate_argspan_prediction(eval_node_df,
     eval_results['arg1_overlap_f1'] = overlap_f1(gt_arg1spans,
                                                  predicted_arg1spans)
     return eval_results
-
-
-# overlap_bool_scorer = make_scorer(overlap_bool, greater_is_better=True)
-# overlap_f1_scorer = make_scorer(overlap_f1, greater_is_better=True)
-
-

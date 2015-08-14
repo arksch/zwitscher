@@ -222,14 +222,6 @@ def learn_main_arg_node(node_df,
     print 'Cross validated Logistic Regression classifier\nscores: %s\nmean score: ' \
           '%f' % (str(scores), scores.mean())
 
-    # print 'Cross validating Random Forest classifier...'
-    # rand_forest_arg0_clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1,
-    #                                               verbose=0)
-    # scores = cross_val_score(rand_forest_arg0_clf, encoded_features,
-    #                          node_df['is_arg0_node'], cv=5)
-    # print 'Cross validated RandomForest classifier\nscores: %s\nmean score: %f' % (
-    #     str(scores), scores.mean())
-
     print ''
     print 'Training classifiers for arg1 labeling'
     print '======================================'
@@ -244,33 +236,13 @@ def learn_main_arg_node(node_df,
           '%f' % (
               str(scores), scores.mean())
 
-    # print 'Cross validating Random Forest classifier...'
-    # rand_forest_arg1_clf = RandomForestClassifier(min_samples_leaf=5, n_jobs=-1, verbose=0)
-    # scores = cross_val_score(rand_forest_arg1_clf, encoded_features, node_df['is_arg1_node'], cv=5)
-    # print 'Cross validated RandomForest classifier\nscores: %s\nmean score: %f' % (
-    #     str(scores), scores.mean())
-
     print 'Learning classifiers on the whole data set...'
     logit_arg0_clf.fit(logit_features, node_df['is_arg0_node'])
     logit_arg1_clf.fit(logit_features, node_df['is_arg1_node'])
-    # rand_forest_arg0_clf.fit(encoded_features, node_df['is_arg0_node'])
-    # rand_forest_arg1_clf.fit(encoded_features, node_df['is_arg1_node'])
     print 'Learned classifier on the whole data set'
 
-    # tree = syntax_dict['s1003']
-    # conn_pos = [7]
-
-    # most_probable_node = predict_arg_node(conn_pos, tree, logit_arg0_clf, featurizer, label_features=label_features, label_encoder=le, binary_encoder=ohe, argument=0)
-
-    #import ipdb; ipdb.set_trace()
-
-
-    # ToDo: Refactor evaluation method from this, then
-    # ToDo: Evaluate this on some evaluation data set (and on itself)
 
     # ToDo: Design features (see Lin et al p. 17, Connective_syntactic!)
-
-
 
     # ToDo: Evaluate this method (remember not to count punctuation)
     # ToDo: Get baseline by labeling everything after the connective as

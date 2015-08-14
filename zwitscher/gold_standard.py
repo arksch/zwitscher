@@ -4,7 +4,7 @@
 This module has helper functions to create a gold standard
 """
 import numpy as np
-from zwitscher.utils.PCC import load_connectors
+from utils.PCC import load_connectors
 
 __author__ = 'arkadi'
 
