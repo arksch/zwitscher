@@ -18,7 +18,9 @@ def predict_sentence_dist(clean_pcc,
                           feature_list,
                           label_features,
                           label_encoder):
-    featurizer = lambda sents, conn_pos: discourse_connective_text_featurizer(sents, conn_pos, feature_list=feature_list)
+    featurizer = lambda sents, conn_pos: discourse_connective_text_featurizer(sents,
+                                                                              conn_pos,
+                                                                              feature_list=feature_list)
 
     features = sentdist_feature_dataframe(clean_pcc, featurizer)
 
