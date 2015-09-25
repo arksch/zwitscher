@@ -93,6 +93,30 @@ An example matching the syntax example above can be found in
    [[8, 14]]
    ]
 
+To create these indices from PCC files you can run the script
+
+   ```sh
+   python connective_positions_from_pcc.py -d data/test_pcc/connectors/maz-00001.xml -s data/test_pcc/syntax/maz-00001.xml
+[[[14, 0], [14, 5]], [[11, 0]], [[2, 0], [2, 1]], [[2, 22]], [[4, 5]], [[3, 2]], [[8, 10]], [[9, 0]], [[8, 14]]]
+
+   python connective_positions_from_pcc.py       
+[[[14, 0], [14, 5]], [[11, 0]], [[2, 0], [2, 1]], [[2, 22]], [[4, 5]], [[3, 2]], [[8, 10]], [[9, 0]], [[8, 14]]]
+
+   python connective_positions_from_pcc.py --help
+Usage: connective_positions_from_pcc.py [OPTIONS]
+
+  A script to print nested or unnested indices of connectives in the
+  sentences of a discourse from PCC files
+
+Options:
+  -d, --discourse_path TEXT  Path to the discourse xml file. Defaults to
+                             data/test_pcc/connectors/maz-00001.xml
+  -s, --syntax_path TEXT     Path to the syntax xml file. Defaults to
+                             data/test_pcc/syntax/maz-00001.xml
+  -n, --nested               Output the nested or unnested positions
+  --help                     Show this message and exit.
+   ```
+
 A fellow project is developing a tool to extract discourse tokens from 
 Twitter text.
 

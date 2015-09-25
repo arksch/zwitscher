@@ -238,4 +238,3 @@ def load_connectors(connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twi
             pickle.dump(pcc, f, protocol=pickle.HIGHEST_PROTOCOL)
     sys.stderr.write(str(errors))
     return pcc
-
