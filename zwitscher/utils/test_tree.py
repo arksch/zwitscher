@@ -64,7 +64,7 @@ class TreeTestCase(unittest.TestCase):
 
     def test_iter_nodes(self):
         assert len(list(self.trees[3].iter_nodes())) == 7
-        assert len(list(self.trees[1].iter_nodes(include_terminals=True))) == 9
+        assert len(list(self.trees[1].iter_nodes(include_terminals=True))) == 10
 
     def test_nodes(self):
 

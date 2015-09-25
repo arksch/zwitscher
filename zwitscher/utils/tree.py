@@ -53,8 +53,13 @@ class ConstituencyTree():
         :type include_terminals: bool
         """
         for node in self.nodes:
-            if not node.terminal:
+            if include_terminals:
                 yield node
+            else:
+                if not node.terminal:
+                    yield node
+                else:
+                    continue
 
     def path_to_root(self, terminal_index):
         """
