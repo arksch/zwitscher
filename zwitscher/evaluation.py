@@ -99,14 +99,17 @@ def evaluate_argspan_prediction(eval_node_df,
                                 binary_encoder=None):
     """ Evaluate how well the argument spans were predicted by classifiers
 
+    Apart from the evaluation data and its synax, every input is returned by the
+    zwitscher.learn.learn_main_arg_node method
+
     :param eval_node_df: Node data including columns 'syntax_id',
     'connective_positions', 'arg0', 'arg1'.
     :type eval_node_df: pandas.DataFrame
     :param syntax_dict: To look up the syntactic information
     :type syntax_dict: dict
-    :param logit_arg0_clf:
+    :param logit_arg0_clf: Classifier for the arg0
     :type logit_arg0_clf:
-    :param logit_arg1_clf:
+    :param logit_arg1_clf: Classifier for the arg1
     :type logit_arg1_clf:
     :param node_featurizer: Create features from the nodes and syntax trees
     :type node_featurizer:

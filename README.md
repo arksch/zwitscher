@@ -17,6 +17,8 @@ be improved with a better feature set.
 
 ## How to use it out of the box?
 
+### Setup
+
 To get all the data and packages you need run
 
    ```sh
@@ -32,16 +34,7 @@ Test your setup by running the main script with default parameters
    python pipeline.py
    ```
 
-If you want to parse other discourses, you will need TigerXML Syntax trees
-for each of them.
-A discourse is typically a paragraph, but it can be of arbitrary size.
-You also need a JSON file in which you save the sentence-nested positions of
-the argument spans. An example can be found in
-
-zwitscher/data/test_pcc/maz-00001_nested_conn_indices.json
-
-A fellow project is developing a tool to extract discourse tokens from 
-Twitter text.
+### Run the script
 
 The script has the following options
 
@@ -69,6 +62,63 @@ Options:
                                   the learn_argspan.py script
   --help                          Show this message and exit.
   ```
+
+### Prepare your own data
+
+A discourse is typically a paragraph, but it can be of arbitrary size.
+If you want to parse other discourses, you will need TigerXML Syntax trees
+for each of them. Store each in a file. An example can be found in
+
+   zwitscher/data/test_pcc/syntax/maz-00001.xml
+
+Since this parser assumes, that discourse connective tokens have already been identified,
+you will need to store this information as well for each discourse.
+Take care, that the tokenization matches the syntax trees.
+The positions of the discourse connectives are saved in a JSON file with sentencewise-nested positions.
+I.e. a list of connectives where each connective consists of token positions and each position
+is a sentence index with a token index in the given sentence.
+An example matching the syntax example above can be found in
+
+   zwitscher/data/test_pcc/maz-00001_nested_conn_indices.json
+   
+   [
+   [[14, 0], [14, 5]],
+   [[11, 0]],
+   [[2, 0], [2, 1]],
+   [[2, 22]],
+   [[4, 5]],
+   [[3, 2]],
+   [[8, 10]],
+   [[9, 0]],
+   [[8, 14]]
+   ]
+
+A fellow project is developing a tool to extract discourse tokens from 
+Twitter text.
+
+### Training new classifiers
+
+You might want to train new classifiers.
+There are two scripts that also evaluate the given state of the algorithm.
+
+The two scripts learn_argspan.py and learn_sentdist.py do not have command line
+options yet. You will have to modify them in the code (also to tell them
+which features they shall use). When you run them,
+they will create a new classification set for either sentence distance or
+argument span, that can be read by the pipeline.py script.
+
+The evaluation of the scripts is printed to standard output. For this a classifiers is first
+trained on a part of the data and evaluated on the rest. The classifier that is saved is then
+trained on the complete data set.
+
+If you want to use your own evaluation methods you will have to embed them inside the script.
+Currently no end-to-end evaluation is implemented.
+If you want to evaluate on a held out data set you will also have to implement that method.
+
+By default both learning scripts load the pickled PCC. If you want to load
+new PCC data or you have changed some methods of the underlying objects,
+then you will have to change the unpickle_gold option to False.
+
 
 ## Performance
 
@@ -127,19 +177,5 @@ labeling separately
 - Fix one of the many ToDos in the code and refactor it to be readable
 
 
-### Training new classifiers
 
-Once you are done improving the scripts in any way, you might want to train
-new classifiers. There are two scripts that also evaluate the given state of 
-the algorithm.
-
-The two scripts learn_argspan.py and learn_sentdist.py do not have command line
-options yet. You will have to modify them from within (also to tell them
-which features they shall use). When you run them,
-they will create a new classification set for either sentence distance or
-argument span, that can be read by the pipeline.py script.
-
-By default both learning scripts load the pickled PCC. If you want to load
-new PCC data or you have changed some methods of the underlying objects,
-then you will have to change the unpickle_gold option to False.
 

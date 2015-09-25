@@ -166,17 +166,26 @@ def learn_main_arg_node(node_df,
     :param node_df: node data with tree and node ids
     :type node_df: pd.DataFrame
     :param syntax_dict: to look up the syntax trees by their id
-    :type syntax_dict:
+    :type syntax_dict: dict
     :param node_dict: to look up the nodes by their id
-    :type node_dict:
-    :param feature_list:
-    :type feature_list:
-    :param internal_argument:
-    :type internal_argument:
-    :param label_features:
-    :type label_features:
-    :return:
-    :rtype:
+    :type node_dict: dict
+    :param precalc_features: precalculated features to save computation time in development
+    :param precalc_features: pd.DataFrame
+    :param feature_list: Names of the features that shall be calculated
+    :type feature_list: list
+    :param label_features: Names of features that are discrete
+    :type label_features: list
+    :return: All data that is needed to classifiy new data with the classifiers
+    LogisticRegression classifiers from scikit learn, the list of features and label
+    features, as well as encoders for the labels and a binary encoder and a featurizer method
+             {'logit_arg0_clf': logit_arg0_clf,
+              'logit_arg1_clf': logit_arg1_clf,
+              'feature_list': feature_list,
+              'label_features': label_features,
+              'label_encoder': le,
+              'binary_encoder': ohe,
+              'node_featurizer': featurizer}
+    :rtype: dict
     """
 
     def featurizer(node_df, syntax_dict, node_dict):
