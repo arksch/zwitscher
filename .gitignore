@@ -13,3 +13,7 @@ __pycache__/
 
 #Pycharm
 .idea/
+
+#Latex
+article/*
+!article/zwitscher.pdf
