@@ -115,7 +115,7 @@ Options:
    ```
 
 A fellow project is developing a tool to extract discourse tokens from 
-Twitter text.
+Twitter text. https://github.com/KaiserKlayton/DCIT
 
 This project uses the DiMLex, a lexicon of German discourse connectives, created by:
 
