@@ -27,5 +27,5 @@ zwitscher/data/dimlex_secret.xml
 #Classifiers excluded
 zwitscher/data/classifiers/*
 !zwitscher/data/classifiers/default_argspan_classification_dict.pickle
-!zwitscher/data/classifiers/default_sentdist_classification_dict.pickle
+!zwitscher/data/classifiers/default_sent_dist_classification_dict.pickle
 !zwitscher/data/classifiers/classifier.log
