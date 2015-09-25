@@ -8,4 +8,11 @@ Ziheng Lin, Hwee~Tou Ng, and Min-Yen Kan.
 \bibitem[PDT]{PDTB}
 {\em The Penn Discourse Treebank 2.0 Annotation Manual}.
 
+\bibitem[SN14]{stede2014pcc}
+Manfred Stede and Arne Neumann.
+\newblock Potsdam commentary corpus 2.0: Annotation for discourse research.
+\newblock In {\em Proceedings of the Ninth International Conference on Language
+  Resources and Evaluation (LREC'14)}, Reykjavik, Iceland, may 2014. European
+  Language Resources Association (ELRA).
+
 \end{thebibliography}

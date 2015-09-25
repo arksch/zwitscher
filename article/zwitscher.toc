@@ -1,12 +1,12 @@
 \select@language {english}
 \contentsline {section}{\numberline {1}Introduction}{2}{section.1}
-\contentsline {section}{\numberline {2}PDTB-style Discourse Parsing}{2}{section.2}
+\contentsline {section}{\numberline {2}PDTB-style discourse parsing}{2}{section.2}
 \contentsline {subsection}{\numberline {2.1}The Penn Discourse Tree Bank}{2}{subsection.2.1}
 \contentsline {subsection}{\numberline {2.2}The Potsdam Commentary Corpus}{3}{subsection.2.2}
 \contentsline {subsection}{\numberline {2.3}The DiMLex}{3}{subsection.2.3}
-\contentsline {subsection}{\numberline {2.4}Lin et al.}{3}{subsection.2.4}
+\contentsline {subsection}{\numberline {2.4}Lin et al.'s discourse parser}{4}{subsection.2.4}
 \contentsline {section}{\numberline {3}A Discourse Parser for German}{5}{section.3}
 \contentsline {subsection}{\numberline {3.1}Adapting Lin et al.'s approach}{5}{subsection.3.1}
-\contentsline {subsection}{\numberline {3.2}Evaluation and Possible Improvements}{6}{subsection.3.2}
-\contentsline {subsection}{\numberline {3.3}Further Steps}{7}{subsection.3.3}
+\contentsline {subsection}{\numberline {3.2}Evaluation and possible improvements}{6}{subsection.3.2}
+\contentsline {subsection}{\numberline {3.3}Further steps}{7}{subsection.3.3}
 \contentsline {section}{References}{8}{section*.2}

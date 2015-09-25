@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2015.7.1)  14 AUG 2015 23:56
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2015.7.1)  15 AUG 2015 11:37
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -534,39 +534,33 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2]
-
-LaTeX Warning: Citation `stede2014pcc' on page 3 undefined on input line 51.
-
 LaTeX Font Info:    Try loading font information for OMS+cmr on input line 55.
+
 (/usr/share/texlive/texmf-dist/tex/latex/base/omscmr.fd
 File: omscmr.fd 1999/05/25 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
 (Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 55.
  [3] [4] [5] [6]
-(./zwitscher.bbl [7])
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 193.
+[7] (./zwitscher.bbl)
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 192.
  [8]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 193.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 192.
  (./zwitscher.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 193.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 193.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 192.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 192.
 Package rerunfilecheck Info: File `zwitscher.out' has not changed.
-(rerunfilecheck)             Checksum: C38D03C34DE302381FCCB3748D10D032;721.
-
-
-LaTeX Warning: There were undefined references.
-
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 193.
+(rerunfilecheck)             Checksum: 2672CF2E421491E4556D4995A68CF467;740.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 192.
  ) 
 Here is how much of TeX's memory you used:
- 7225 strings out of 493308
- 101802 string characters out of 6140093
- 206229 words of memory out of 5000000
+ 7226 strings out of 493308
+ 101819 string characters out of 6140093
+ 206268 words of memory out of 5000000
  10575 multiletter control sequences out of 15000+600000
  12017 words of font info for 47 fonts, out of 8000000 for 9000
  957 hyphenation exceptions out of 8191
- 31i,13n,40p,917b,357s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 31i,13n,40p,1096b,336s stack positions out of 5000i,500n,10000p,200000b,80000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></us
 r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/shar
 e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texli
@@ -579,9 +573,9 @@ nts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm
 /cmsy6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.
 pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></
 usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
-Output written on zwitscher.pdf (8 pages, 189568 bytes).
+Output written on zwitscher.pdf (8 pages, 194925 bytes).
 PDF statistics:
- 179 PDF objects out of 1000 (max. 8388607)
- 36 named destinations out of 1000 (max. 500000)
+ 184 PDF objects out of 1000 (max. 8388607)
+ 37 named destinations out of 1000 (max. 500000)
  89 words of extra memory for PDF output out of 10000 (max. 10000000)
 
