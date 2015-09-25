@@ -99,9 +99,6 @@ To create these indices from PCC files you can run the script
    python connective_positions_from_pcc.py -d data/test_pcc/connectors/maz-00001.xml -s data/test_pcc/syntax/maz-00001.xml
 [[[14, 0], [14, 5]], [[11, 0]], [[2, 0], [2, 1]], [[2, 22]], [[4, 5]], [[3, 2]], [[8, 10]], [[9, 0]], [[8, 14]]]
 
-   python connective_positions_from_pcc.py       
-[[[14, 0], [14, 5]], [[11, 0]], [[2, 0], [2, 1]], [[2, 22]], [[4, 5]], [[3, 2]], [[8, 10]], [[9, 0]], [[8, 14]]]
-
    python connective_positions_from_pcc.py --help
 Usage: connective_positions_from_pcc.py [OPTIONS]
 
