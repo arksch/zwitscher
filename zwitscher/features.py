@@ -19,7 +19,7 @@ def discourse_connective_text_featurizer(sents, nested_connective_positions,
                                                        'length_prev_sent', 'length_same_sent', 'length_next_sent',
                                                        'tokens_before', 'tokens_after', 'tokens_between',
                                                        'prev_token', '2prev_token', 'next_token'],
-                                         dimlex_path=os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')):
+                                         dimlex_path=None):
     """ A very simple featurizer for connectives in a text to classify argument positions
 
     :param sents: A list of sentences. Each sentence is a list of tokens.
@@ -40,6 +40,13 @@ def discourse_connective_text_featurizer(sents, nested_connective_positions,
     :return: Features:
     :rtype: pd.DataFrame
     """
+    if dimlex_path is None:
+        try:
+            dimlex_path = os.environ['DIMLEX_PATH']
+        except Exception, e:
+            dimlex_path = os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')
+            print('Could not find DIMLEX_PATH environment variable.'
+                  'Trying to load dimlex from default path %s' % dimlex_path)
     results = dict()
     for feature in feature_list:
         if isinstance(feature, basestring):
@@ -84,7 +91,7 @@ def node_featurizer(node,
                     feature_list=['connective_lexical', 'nr_of_C_siblings',
                                   'nr_of_left_C_siblings', 'nr_of_right_C_siblings',
                               'node_cat', 'path_to_node', 'relative_pos_of_N_to_C'],
-                    dimlex_path=os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')):
+                    dimlex_path=None):
     """ Calculating features for finding the argument nodes
 
     :param node:
@@ -100,7 +107,13 @@ def node_featurizer(node,
     :return:
     :rtype: dict
     """
-
+    if dimlex_path is None:
+        try:
+            dimlex_path = os.environ['DIMLEX_PATH']
+        except Exception, e:
+            dimlex_path = os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')
+            print('Could not find DIMLEX_PATH environment variable.'
+                  'Trying to load dimlex from default path %s' % dimlex_path)
     results = dict()
     for feature in feature_list:
         if isinstance(feature, basestring):
