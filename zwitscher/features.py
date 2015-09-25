@@ -42,11 +42,11 @@ def discourse_connective_text_featurizer(sents, nested_connective_positions,
     """
     if dimlex_path is None:
         try:
-            dimlex_path = os.environ['DIMLEX_PATH']
-        except Exception, e:
             dimlex_path = os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')
-            print('Could not find DIMLEX_PATH environment variable.'
-                  'Trying to load dimlex from default path %s' % dimlex_path)
+            if not os.path.isfile(dimlex_path):
+                dimlex_path = os.environ['DIMLEX_PATH']
+        except Exception, e:
+            raise 'Found no file at default dimlex path and also no envvar DIMLEX_PATH'
     results = dict()
     for feature in feature_list:
         if isinstance(feature, basestring):
@@ -109,11 +109,11 @@ def node_featurizer(node,
     """
     if dimlex_path is None:
         try:
-            dimlex_path = os.environ['DIMLEX_PATH']
-        except Exception, e:
             dimlex_path = os.path.join(os.path.dirname(__file__), 'data/dimlex.xml')
-            print('Could not find DIMLEX_PATH environment variable.'
-                  'Trying to load dimlex from default path %s' % dimlex_path)
+            if not os.path.isfile(dimlex_path):
+                dimlex_path = os.environ['DIMLEX_PATH']
+        except Exception, e:
+            raise 'Found no file at default dimlex path and also no envvar DIMLEX_PATH'
     results = dict()
     for feature in feature_list:
         if isinstance(feature, basestring):
