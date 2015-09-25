@@ -39,7 +39,7 @@ Test your setup by running the main script with default parameters
 The script has the following options
 
   ```sh
-  python pipeline.py --help
+  $ python pipeline.py --help
 Usage: pipeline.py [OPTIONS]
 
   Running a pipeline to label argument spans in a syntax annotated discourse
@@ -96,14 +96,54 @@ An example matching the syntax example above can be found in
 A fellow project is developing a tool to extract discourse tokens from 
 Twitter text.
 
+This project uses the DiMLex, a lexicon of German discourse connectives, created by:
+
+Manfred Stede. "DiMLex: A Lexical Approach to Discourse Markers" In: A. Lenci, V. Di Tomaso (eds.): Exploring the Lexicon - Theory and Computation. Alessandria (Italy): Edizioni dell'Orso, 2002.
+
+You can download a current public version of the DiMLex at 
+https://github.com/discourse-lab/dimlex
+to replace the one copied to this repository.
+
 ### Training new classifiers
 
 You might want to train new classifiers.
-There are two scripts that also evaluate the given state of the algorithm.
+There are two scripts that also evaluate their results of the algorithm.
+You can start the scripts from the zwitscher/zwitscher folder with
 
-The two scripts learn_argspan.py and learn_sentdist.py do not have command line
-options yet. You will have to modify them in the code (also to tell them
-which features they shall use). When you run them,
+   ```sh
+   $ python learn_sentdist.py
+   ...similar output as below...
+   $ python learn_argspan.py
+   
+   Learning classifier for finding the main nodes of connectors.
+   =============================================================
+   Loading data...
+   Unpickling gold data from data/PCC_disc.pickle
+   Loaded data
+   Cleaning data...
+   ...
+   Training classifiers for arg0 labeling
+   ======================================
+   Majority baseline: 0.881298
+   Cross validating Logistic regression classifier...
+   Cross validated Logistic Regression classifier
+   scores: [ 0.91257996  0.89434365  0.92102455  0.90918803  0.90277778]
+   mean score: 0.907983
+   
+   Training classifiers for arg1 labeling
+   ======================================
+   Majority baseline: 0.885781
+   Cross validating Logistic regression classifier...
+   Cross validated Logistic Regression classifier
+   scores: [ 0.88473853  0.88580576  0.88580576  0.88580576  0.88568376]
+   mean score: 0.885568
+   Learning classifiers on the whole data set...
+   Learned classifier on the whole data set
+   ...done
+   Pickling sent_dist classifier to ed0f4620cd1c4402bfa582182be83b44_argspan_classification_dict.pickle
+   ```
+
+You can see the options of the scripts below. When you run them,
 they will create a new classification set for either sentence distance or
 argument span, that can be read by the pipeline.py script.
 
@@ -118,6 +158,38 @@ If you want to evaluate on a held out data set you will also have to implement t
 By default both learning scripts load the pickled PCC. If you want to load
 new PCC data or you have changed some methods of the underlying objects,
 then you will have to change the unpickle_gold option to False.
+
+The scripts have the following options:
+
+   ```sh
+   $ python learn_argspan.py --help
+Usage: learn_argspan.py [OPTIONS]
+
+  Learning and storing classifiers for argument spans of discourse
+  connectivesThe output file can be passed used by the pipeline with python
+  pipeline.py -as 123uuid_argspan_classification_dict.pickle
+
+Options:
+  -f, --feature_list TEXT       A comma separated list of features. By default
+                                connective_lexical,nr_of_siblings,path_to_node
+                                ,node_cat
+  -lf, --label_features TEXT    A comma separated list of features that are
+                                labels. By defaultconnective_lexical,path_to_n
+                                ode,node_cat
+  -cf, --connector_folder TEXT  The folder to find the connectors from the
+                                potsdam commentary corpusCan be left empty if
+                                unpickle_gold is True
+  -pf, --pickle_folder TEXT     The folder for all the pickles
+  -uf, --unpickle_features      Unpickle precalculated features. Useful for
+                                dev
+  -ug, --unpickle_gold          Unpickle gold connector data. Useful for dev
+  -pc, --pickle_classifier      Pickle the classifier for later use, e.g. in
+                                the pipeline.Note that this adds an uuid to
+                                the output, so it doesnt overwrite former
+                                outputOtherwise this script will just print
+                                the evaluation
+  --help                        Show this message and exit.
+   ```
 
 
 ## Performance

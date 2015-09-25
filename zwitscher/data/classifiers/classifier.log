@@ -16,3 +16,4 @@ eb5a46de34264eab8256ec1e093fecb7	0.882085	['connective_lexical', 'length_prev_se
 arg_span	ed0f4620cd1c4402bfa582182be83b44	arg0-bool: 0.243478, arg1-bool: 0.295652, arg0-f1: 0.236867, arg1-f1: 0.274589	['connective_lexical', 'nr_of_siblings', 'path_to_node', 'node_cat']
 sent_dist	d7eaf2f0713f41b3b1d9ed1ad3acd194	0.910183	['connective_lexical', 'length_prev_sent', 'length_connective', 'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token', 'next_token', '2prev_token']
 arg_span	b7a2a707c4df4174a20dd20292f2c24a	arg0-bool: 0.256637, arg1-bool: 0.283186, arg0-f1: 0.227327, arg1-f1: 0.217587	['connective_lexical', 'nr_of_siblings', 'path_to_node', 'node_cat']
+sent_dist	bd80778c07704914ab5ed732a9130c01	0.899887	['connective_lexical', 'length_prev_sent', 'length_connective', 'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token', 'next_token', '2prev_token']

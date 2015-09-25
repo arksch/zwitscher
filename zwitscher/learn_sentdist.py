@@ -7,17 +7,48 @@ import os
 import uuid
 import pickle
 
+import click
+
 from gold_standard import pcc_to_gold
 from learn import learn_sentdist
-from zwitscher.gold_standard import load_gold_data, clean_data
+from gold_standard import load_gold_data, clean_data
 
 __author__ = 'arkadi'
 
-# ToDo: Clickify this!
-def main(feature_list=['connective_lexical', 'length_connective',
-                       'length_prev_sent', 'length_same_sent', 'length_next_sent',
-                       'tokens_before', 'tokens_after', 'tokens_between'],
-         label_features=['connective_lexical'],
+
+@click.command(help='Learning and storing classifiers for sentence distances between arguments'
+                    ' of discourse connectives.\n'
+                    'The output file can be passed used by the pipeline with\n'
+                    'python pipeline.py -as 123uuid_sentdist_classification_dict.pickle')
+@click.option('--feature_list', '-f',
+              help='A comma separated list of features. By default: '
+                   'connective_lexical,length_prev_sent,length_connective,length_same_sent,'
+                   'tokens_before,length_next_sent,prev_token,next_token,2prev_token',
+              default=None)
+@click.option('--label_features', '-lf',
+              help='A comma separated list of features that are labels. By default: '
+                   'connective_lexical,prev_token,next_token,2prev_token',
+              default=None)
+@click.option('--connector_folder', '-cf',
+              help='The folder to find the connectors from the potsdam commentary corpus'
+                   'Can be left empty if unpickle_gold is True',
+              default='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/'
+                      'potsdam-commentary-corpus-2.0.0/connectors')
+@click.option('--pickle_folder', '-pf',
+              help='The folder for all the pickles',
+              default='data')
+@click.option('--unpickle_gold', '-ug',
+              is_flag=True,
+              help='Unpickle gold connector data. Useful for dev',
+              default=False)
+@click.option('--pickle_classifier', '-pc',
+              is_flag=True,
+              help='Pickle the classifier for later use, e.g. in the pipeline.'
+                   'Note that this adds an uuid to the output, so it doesnt overwrite former output'
+                   'Otherwise this script will just print the evaluation',
+              default=True)
+def main(feature_list=None,
+         label_features=None,
          connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
                           'potsdam-commentary-corpus-2.0.0/connectors',
          pickle_folder='data',
@@ -43,6 +74,17 @@ def main(feature_list=['connective_lexical', 'length_connective',
     :rtype: (sklearn.ensemble.forest.RandomForestClassifier, sklearn.preprocessing.LabelEncoder)
     """
     # Some checks on the function call
+    if feature_list is None:
+        feature_list = ['connective_lexical', 'length_prev_sent', 'length_connective',
+                        'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token',
+                        'next_token', '2prev_token']
+    else:
+        feature_list = feature_list.split(',')
+    if label_features is None:
+        label_features = ['connective_lexical', 'prev_token', 'next_token', '2prev_token']
+    else:
+        label_features = feature_list.split(',')
+
     if pickle_classifier or unpickle_gold:
         assert os.path.exists(pickle_folder), 'Pickle folder has to exist when using pickling'
     if not unpickle_gold:
@@ -86,13 +128,5 @@ def main(feature_list=['connective_lexical', 'length_connective',
 
 
 if __name__ == '__main__':
-
-    feature_list = ['connective_lexical', 'length_prev_sent', 'length_connective',
-                    'length_same_sent', 'tokens_before', 'length_next_sent', 'prev_token', 'next_token', '2prev_token']
-    # 'tokens_before', 'tokens_after', ,             'length_next_sent',]
-
-    main(feature_list=feature_list,
-         label_features=['connective_lexical', 'prev_token', 'next_token', '2prev_token'],
-         unpickle_gold=True,
-         pickle_classifier=True)
+    main()
 

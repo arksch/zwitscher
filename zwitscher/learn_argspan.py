@@ -9,6 +9,7 @@ import uuid
 import pickle
 
 import pandas as pd
+import click
 
 from gold_standard import pcc_to_gold
 from learn import learn_main_arg_node
@@ -18,34 +19,73 @@ from evaluation import evaluate_argspan_prediction, random_train_test_split
 
 __author__ = 'arkadi'
 
-# ToDo: Clickify this!
-def main(feature_list=['connective_lexical',
-                       'nr_of_siblings',
-                       'path_to_node',
-                       'node_cat'],
-         label_features=['connective_lexical', 'node_cat', 'path_to_node'],
+
+@click.command(help='Learning and storing classifiers for argument spans of discourse connectives'
+                    'The output file can be passed used by the pipeline with\n'
+                    'python pipeline.py -as 123uuid_argspan_classification_dict.pickle')
+@click.option('--feature_list', '-f',
+              help='A comma separated list of features. By default'
+                   'connective_lexical,nr_of_siblings,path_to_node,node_cat',
+              default=None)
+@click.option('--label_features', '-lf',
+              help='A comma separated list of features that are labels. By default'
+                   'connective_lexical,path_to_node,node_cat',
+              default=None)
+@click.option('--connector_folder', '-cf',
+              help='The folder to find the connectors from the potsdam commentary corpus'
+                   'Can be left empty if unpickle_gold is True',
+              default='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/'
+                      'potsdam-commentary-corpus-2.0.0/connectors')
+@click.option('--pickle_folder', '-pf',
+              help='The folder for all the pickles',
+              default='data')
+@click.option('--unpickle_features', '-uf',
+              is_flag=True,
+              help='Unpickle precalculated features. Useful for dev',
+              default=False)
+@click.option('--unpickle_gold', '-ug',
+              is_flag=True,
+              help='Unpickle gold connector data. Useful for dev',
+              default=False)
+@click.option('--pickle_classifier', '-pc',
+              is_flag=True,
+              help='Pickle the classifier for later use, e.g. in the pipeline.'
+                   'Note that this adds an uuid to the output, so it doesnt overwrite former output'
+                   'Otherwise this script will just print the evaluation',
+              default=True)
+def main(feature_list=None,
+         label_features=None,
          connector_folder='/media/arkadi/arkadis_ext/NLP_data/ger_twitter/' +
                           'potsdam-commentary-corpus-2.0.0/connectors',
          pickle_folder='data',
-         unpickle_features=True,
-         unpickle_gold=True,
+         unpickle_features=False,
+         unpickle_gold=False,
          pickle_classifier=True
          ):
     """ The main learning function for a classifier
 
     :param feature_list: list of features that shall be calculated with discourse_connective_text_featurizer
     :param label_features: list of features that have to be encoded as labels
-    :return: trained classifier, score array and label encoder
     :param connector_folder: folder with the gold data. Can be left empty when unpickling the gold data
     :type connector_folder: str
     :param pickle_folder: The folder where pickles are put. The names are dealt with internally
     :type pickle_folder: str
     :type unpickle_gold: bool
     :type pickle_classifier: bool
-    :return: Classifier and Label encoder to decode labels for prediction
-    :rtype: (sklearn.ensemble.forest.RandomForestClassifier, sklearn.preprocessing.LabelEncoder)
     """
     # Some checks on the function call
+    if feature_list is None:
+        feature_list = ['connective_lexical',
+                        'nr_of_siblings',
+                        'path_to_node',
+                        'node_cat']
+    else:
+        feature_list = feature_list.split(',')
+    if label_features is None:
+        label_features = ['connective_lexical', 'node_cat', 'path_to_node']
+    else:
+        label_features = feature_list.split(',')
+
     if pickle_classifier or unpickle_gold or unpickle_features:
         assert os.path.exists(pickle_folder), 'Pickle folder has to exist when using pickling'
     if not unpickle_gold:
@@ -139,4 +179,4 @@ def main(feature_list=['connective_lexical',
 
 
 if __name__ == '__main__':
-    main(unpickle_gold=True, unpickle_features=False)
+    main()
