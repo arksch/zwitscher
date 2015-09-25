@@ -17,3 +17,10 @@ __pycache__/
 #Latex
 article/*
 !article/zwitscher.pdf
+
+#Dimlex data
+zwitscher/data/dimlex-documentation.txt
+zwitscher/data/dimlex.xml
+
+#R
+.Rhistory
